@@ -6,6 +6,25 @@ Legend: ✅ accepted (verified real) · ❌ rejected (false/hallucinated) · ⏳
 
 ---
 
+## Iteration 3 — 2026-06-27 — Energy regen-tick predictor (hud.lua spark)
+
+Shipped roadmap item 2: a thin spark on the energy bar sweeping 0→100% over the energy regen cycle, to help energy-pooling. GLM 9 points (4 bugs + 5 confirmations), Codex 8 (3 bugs + 5 confirm/optional). → v1.3.0. Raw: `reviews/glm/iter3.md`, `reviews/codex/iter3.md`.
+
+| # | Finding | GLM | Codex | Verdict | Notes |
+|---|---------|:---:|:----:|---------|-------|
+| 1 | **Adrenaline Rush: does it change tick *interval* or per-tick *amount*?** | "interval → 1s, hardcode breaks" | "phase unchanged, only amount" | ⚖️ **sidestepped** | **Direct factual contradiction on TBC mechanics.** Instead of betting, I now *measure* the tick cadence from gap-to-gap (clamped 0.8–2.2s) and sweep on the measured interval — correct under either model. GLM's `GetPowerRegen()` fix also risks not existing in 2.5.x. |
+| 2 | Any positive energy delta resets the spark → false-sync on Relentless Strikes / Thistle Tea / Combat Potency procs | ✅ | ✅ | ✅ **applied** | Both caught it. Filter: only resync on `delta >= 10` (ignores small procs). GLM's `delta%20==0` was rejected — near-cap ticks add <20, would miss them. |
+| 3 | 2px spark clips past the bar ends at frac 0/1 | ✅ | ✅ | ✅ **applied** | Clamp `x` to `[0, width − sparkWidth]`. |
+| 4 | `energyMax` not hardened if `UnitPowerMax` returns nil | — | ✅ | ✅ **applied** | `(m and m>0) and m or 100`. |
+| 5 | First-sample should return early for clarity/safety | — | ✅ | ✅ **applied** | `if self.lastEnergy == nil then ...; return end`. |
+| 6 | Factor `Enum.PowerType.Energy or 3` into one constant | — | ✅ (optional) | ✅ **applied** | `local ENERGY` at top. |
+| 7 | OnDragStop stores nil relativeTo + `root.bg` missing → anchor resets | ✅ | — | ❌ **rejected** | **False positive.** Verified in-file: `root.bg` assignment exists (hud.lua:31); storing nil is deliberate — re-anchors to UIParent with preserved x,y (hud.lua:18). Position is retained. |
+| N1 | 2.0s base interval correct; nil-safety good; 0.05s poll perf fine; cap-hide good; Enum fallback fine | ✅ | ✅ | ✅ no-op | Both independently confirmed the parts I got right. |
+
+**Lesson:** iteration 1 had convergence on the big bug; iteration 2 had one contradiction; **iteration 3's headline is a contradiction on game mechanics neither model could settle.** The right move wasn't to pick a winner — it was to redesign so the answer doesn't matter (measure, don't assume). Triangulation's value here was *surfacing* that the assumption was load-bearing and unverified.
+
+---
+
 ## Iteration 2 — 2026-06-27 — CD tracker row (cooldowns.lua)
 
 Shipped roadmap item 1: a read-only cooldown-icon row (Vanish/Evasion/Sprint/Blade Flurry/Adrenaline Rush/Cold Blood/Preparation), icons only for spells you know. GLM gave 5 findings, Codex 5. **Codex web-verified its API claims** against warcraft.wiki. Raw: `reviews/glm/iter2.md`, `reviews/codex/iter2.md`. → v1.2.0.

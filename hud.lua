@@ -6,6 +6,7 @@ local HUD = NS:RegisterModule("hud", {})
 local WIDTH, HEIGHT = 240, 18
 local CP_SIZE, CP_GAP = 22, 6
 local MAX_CP = 5
+local ENERGY = Enum and Enum.PowerType and Enum.PowerType.Energy or 3
 
 function HUD:Init()
     local db = NS.db
@@ -58,6 +59,19 @@ function HUD:Init()
         end
     end
 
+    -- energy regen-tick spark: a thin marker sweeping the bar 0->100% over the
+    -- ~2s regen cycle, reset whenever energy is observed to gain. Helps pooling.
+    energy.spark = energy:CreateTexture(nil, "OVERLAY")
+    energy.spark:SetColorTexture(1, 1, 1, 0.85)
+    energy.spark:SetWidth(2)
+    energy.spark:SetPoint("TOP", energy, "TOPLEFT", 0, 0)
+    energy.spark:SetPoint("BOTTOM", energy, "BOTTOMLEFT", 0, 0)
+    energy.spark:Hide()
+    self.lastEnergy = nil
+    self.energyMax = 100
+    self.lastTick = 0
+    self.tickInterval = 2.0 -- self-calibrated from observed tick gaps
+
     -- ---- Combo point pips ----
     self.pips = {}
     local totalW = MAX_CP * CP_SIZE + (MAX_CP - 1) * CP_GAP
@@ -87,11 +101,48 @@ end
 
 function HUD:UpdatePower()
     if not self.energy then return end
-    local e = UnitPower("player", Enum and Enum.PowerType and Enum.PowerType.Energy or 3)
-    local m = UnitPowerMax("player", Enum and Enum.PowerType and Enum.PowerType.Energy or 3)
-    self.energy:SetMinMaxValues(0, m > 0 and m or 100)
+    local e = UnitPower("player", ENERGY)
+    local m = UnitPowerMax("player", ENERGY)
+    self.energyMax = (m and m > 0) and m or 100
+    self.energy:SetMinMaxValues(0, self.energyMax)
     self.energy:SetValue(e)
     self.energy.text:SetText(e)
+
+    if self.lastEnergy == nil then self.lastEnergy = e; return end
+    -- A regen tick lands as a sizable positive delta. Small proc gains (Combat
+    -- Potency etc.) are ignored with the >=10 filter so they don't yank the spark.
+    -- We MEASURE the real tick cadence from gap to gap (clamped) instead of assuming
+    -- 2.0s — GLM and Codex disagreed on whether Adrenaline Rush changes the tick
+    -- interval or the per-tick amount, so measuring sidesteps the unresolved question.
+    if e > self.lastEnergy and (e - self.lastEnergy) >= 10 then
+        local now = GetTime()
+        local gap = now - (self.lastTick or now)
+        if gap >= 0.8 and gap <= 2.2 then self.tickInterval = gap end
+        self.lastTick = now
+    end
+    self.lastEnergy = e
+end
+
+-- Move the regen-tick spark; called every render frame from timers:Render.
+function HUD:UpdateEnergyTick()
+    local s = self.energy and self.energy.spark
+    if not s then return end
+    -- hide when disabled or at full energy (no tick to wait for)
+    if not NS.db.tickSpark or (self.lastEnergy and self.lastEnergy >= self.energyMax) then
+        s:Hide(); return
+    end
+    local interval = self.tickInterval or 2.0
+    local frac = (GetTime() - (self.lastTick or 0)) / interval
+    if frac < 0 then frac = 0 elseif frac > 1 then frac = 1 end
+    local w = self.energy:GetWidth()
+    local sw = s:GetWidth() or 2
+    local x = frac * w
+    if x > w - sw then x = w - sw end  -- keep the full 2px spark inside the bar
+    if x < 0 then x = 0 end
+    s:ClearAllPoints()
+    s:SetPoint("TOP", self.energy, "TOPLEFT", x, 0)
+    s:SetPoint("BOTTOM", self.energy, "BOTTOMLEFT", x, 0)
+    s:Show()
 end
 
 function HUD:UpdateCP()

@@ -14,6 +14,23 @@ Success criteria for the addon: loads clean on a TBC Anniversary client, zero Lu
 
 ---
 
+## Iteration 3 — 2026-06-27 — Energy regen-tick predictor (v1.3.0)
+
+**What:** Shipped roadmap item 2 — a thin "spark" on the energy bar that sweeps left→right over the energy regen cycle and resets on each tick, so you can time energy pooling / pre-tick finishers. New `/cut spark` toggle. Read-only.
+
+**Triangulation:** GLM + Codex. The interesting part was a **direct factual disagreement about how Adrenaline Rush works** — GLM said AR halves the tick interval (so a hardcoded 2.0s sweep would break), Codex said AR only changes energy-per-tick and leaves the 2.0s phase alone. I couldn't verify which is true without a live client, and `GetPowerRegen()` (GLM's proposed fix) may not exist in 2.5.x. **Resolution: stop assuming, start measuring** — the spark now self-calibrates its interval from the observed gap between real ticks (clamped 0.8–2.2s), which is correct no matter which AR model is right.
+
+**Fixes applied:**
+1. **Self-calibrating tick interval** (replaces hardcoded 2.0s) — measured from tick-to-tick gaps; robust to the unresolved AR mechanic.
+2. **Proc filter** — only treat a `+≥10` energy delta as a tick, so Combat Potency / small refunds don't yank the spark back to 0. (GLM's `delta%20==0` was rejected: near-cap ticks add fewer than 20.)
+3. **Spark clamp** — keep the full 2px marker inside the bar at both ends.
+4. **Hardened `energyMax`** against a nil `UnitPowerMax`, and added an explicit first-sample early return.
+5. **`ENERGY` power-type constant** factored to the top.
+
+**Rejected:** GLM's claim that `OnDragStop` loses the anchor and `root.bg` is unassigned — verified false in-file (assignment present; storing nil relativeTo is intentional and position is preserved via UIParent + x,y).
+
+---
+
 ## Iteration 2 — 2026-06-27 — CD tracker row (v1.2.0)
 
 **What:** Shipped roadmap item 1 — `cooldowns.lua`, a read-only row of cooldown icons (with sweep timers + desaturation) for rogue defensives/utility: Vanish, Evasion, Sprint, Blade Flurry, Adrenaline Rush, Cold Blood, Preparation. Icons appear **only for spells you actually know**, so spec-specific talents (Cold Blood, AR/Blade Flurry, Preparation) auto-hide for the wrong build. Still read-only — no casting.

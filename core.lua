@@ -17,6 +17,7 @@ local defaults = {
     openerHint = true,  -- show "Ambush / Garrote" hint when stealthed w/ target
     sound = true,
     energyTicks = true, -- show 20-energy tick marks
+    tickSpark = true,   -- moving spark = progress to next ~2s energy regen tick
 }
 
 -- ---- Class gate ----

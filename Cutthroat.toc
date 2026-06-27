@@ -2,7 +2,7 @@
 ## Title: Cutthroat |cff00ff96Rogue|r
 ## Notes: Rogue HUD + combat alerts for TBC Classic. Energy, combo points, SnD/Rupture timers, Kick reminder, poison check. Alerts only — no automation.
 ## Author: Cutthroat
-## Version: 1.2.0
+## Version: 1.3.0
 ## SavedVariables: CutthroatDB
 ## IconTexture: Interface\Icons\Ability_Rogue_Eviscerate
 

@@ -4,7 +4,7 @@
 
 ## Near-term (next iterations)
 - [x] **CD tracker row**: Vanish, Evasion, Sprint, Blade Flurry, Adrenaline Rush, Cold Blood, Preparation — icon cooldown swipes. *(shipped v1.2.0, iter 2)*
-- [ ] **Energy tick predictor**: mark the next +20 energy regen tick (2s cadence) on the bar.
+- [x] **Energy tick predictor**: spark marks progress to the next energy regen tick; self-calibrating interval. *(shipped v1.3.0, iter 3)*
 - [ ] **SnD/Rupture refresh-window highlight**: green zone when refreshing is optimal (pandemic-style, ~30% remaining).
 - [ ] **Spec detection**: read talents, adjust finisher durations (SnD/Rupture scale with talents like Improved SnD).
 

@@ -111,6 +111,7 @@ function Timers:Render()
     if not NS.IsRogue then return end
     NS.modules.hud:UpdateCP()
     NS.modules.hud:UpdatePower()
+    NS.modules.hud:UpdateEnergyTick()
 
     local now = GetTime()
     for key, b in pairs(self.bars) do
