@@ -17,6 +17,25 @@ local TRACK = {
 }
 
 local BAR_W, BAR_H = 200, 14
+local ENERGY = Enum and Enum.PowerType and Enum.PowerType.Energy or 3
+
+-- Can the player actually refresh this aura right now? Used to gate the green
+-- "refresh-now" cue so it never implies an action you lack resources for.
+-- Finisher cost is 25 energy; SnD needs only energy, Rupture/Expose also need CP.
+local function HasRefreshResources(key)
+    local e = UnitPower("player", ENERGY)
+    if key == "snd" then
+        return e >= 25 -- self-buff, only needs energy
+    elseif key == "rup" or key == "exp" then
+        -- finishers: need a live attackable target AND energy AND a combo point
+        if not UnitExists("target") or UnitIsDead("target")
+            or not UnitCanAttack("player", "target") then
+            return false
+        end
+        return e >= 25 and (GetComboPoints("player", "target") or 0) >= 1
+    end
+    return false -- Garrote: stealth-only, can't refresh in combat -> never cue green
+end
 
 local function GetAura(unit, name, byPlayer)
     -- WoW aura filters are SPACE-separated tokens, not pipe-separated.
@@ -168,6 +187,7 @@ function Timers:Render()
                 end
             end
             local green = want and NS.db.refreshZone
+            if green and NS.db.smartRefresh then green = HasRefreshResources(key) end
             if green ~= b.greenState then
                 b.greenState = green
                 b:SetStatusBarColor(unpack(green and NS.color.good or b.baseColor))

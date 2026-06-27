@@ -14,6 +14,28 @@ Success criteria for the addon: loads clean on a TBC Anniversary client, zero Lu
 
 ---
 
+## Iteration 5 — 2026-06-27 — Resource-aware refresh cue (v1.5.0)
+
+**What:** The green "refresh-now" fill on the timer bars now only lights when you can actually act on it — SnD needs ≥25 energy; Rupture/Expose need ≥25 energy + ≥1 combo point + a live attackable target; Garrote never cues green (it's a stealth opener, not refreshable in combat). New `/cut smart` toggle (on by default) to disable the gating if you prefer pure-time green.
+
+**Triangulation — the clearest win for the cross-check method so far.** GLM's review this round had **four false positives**, and Codex (the independent verifier) cleared every one while contributing the single real catch:
+- GLM claimed *"TBC has pandemic, fix the comment"* — but it had **agreed the opposite in iteration 4**, and pandemic is a MoP-2012 mechanic absent from TBC Classic. Applying it would have written a factually wrong comment into the code.
+- GLM claimed `RegisterUnitEvent` doesn't exist in 2.5.x and "silently breaks" the aura scanner — false (it's standard in Classic; a missing method would error, not silently fail; Codex flagged nothing).
+- GLM wanted the `Enum.PowerType.Energy or 3` fallback hardcoded — Codex confirmed the fallback is already correct.
+- GLM flagged a missing `markerDur` reset that iteration 4 already added.
+
+The lesson: even a strong model drifts and contradicts itself across sessions. **Blindly applying one model's review would have degraded the code.** The independent second opinion is the safety net — this is why we triangulate rather than defer.
+
+**Fixes applied (the real ones):**
+1. **Garrote never green** under smart mode (Codex catch) — you can't refresh it in combat.
+2. **Live-target guard** for Rupture/Expose before the combo-point check (both reviewers) — `UnitExists` + not `UnitIsDead` + `UnitCanAttack`.
+
+**Confirmed correct by both:** 25-energy finisher cost (no TBC talent reduces it), `GetComboPoints("player","target")` signature, `>=1` gate, per-frame perf, dynamic green-on as energy ticks to 25, Expose-on-CP gating.
+
+**Roadmap pruned:** "poison-type awareness" marked **infeasible** — `GetWeaponEnchantInfo` in 2.5.x returns no enchant ID, so the applied poison can't be identified (present/absent only).
+
+---
+
 ## Iteration 4 — 2026-06-27 — Refresh-now marker on timer bars (v1.4.0)
 
 **What:** Each SnD/Rupture/Expose/Garrote bar now shows a "refresh-now" marker at the point the shrinking fill crosses the warn threshold, plus the fill turns green in the final window. `/cut zone` toggle. Read-only.

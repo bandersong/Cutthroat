@@ -6,6 +6,26 @@ Legend: ✅ accepted (verified real) · ❌ rejected (false/hallucinated) · ⏳
 
 ---
 
+## Iteration 5 — 2026-06-27 — Resource-aware refresh cue (v1.5.0)
+
+The green "refresh-now" fill now only lights when you can actually refresh (CP/energy/live target). `/cut smart` toggle. **This round is the strongest case yet for triangulation: GLM produced 4 false positives, Codex cleared them and added the one real catch.** Raw: `reviews/glm/iter5.md`, `reviews/codex/iter5.md`.
+
+| # | Finding | GLM | Codex | Verdict | Notes |
+|---|---------|:---:|:----:|---------|-------|
+| 1 | Garrote returns `true` → green implies "refreshable" when it isn't (stealth-only in combat) | — | ✅ | ✅ **applied** | Codex-only real catch. Garrote now never cues green. |
+| 2 | Rup/Exp CP gate needs a live attackable target guard | ✅ | ✅ | ✅ **applied** | Convergent. Added `UnitExists/UnitIsDead/UnitCanAttack` before the CP check. |
+| 3 | **"TBC HAS pandemic, fix the comment"** | ✅ | — | ❌ **rejected** | **GLM contradicts its own iteration 4** (where it agreed TBC has none). Ground truth: pandemic = MoP 5.0 (2012); TBC Classic has none. False. |
+| 4 | **`RegisterUnitEvent` doesn't exist in 2.5.x, silently breaks UNIT_AURA** | ✅ | — | ❌ **rejected** | Scary if true (3 files use it). But Codex reviewed timers.lua and flagged nothing; never flagged it in iters 1–2 either. RegisterUnitEvent is standard in Classic/TBC-Classic. GLM's own mechanism is self-inconsistent ("silently fails" — a nil method *errors*). False. |
+| 5 | `Enum.PowerType.Energy` nil → must hardcode 3 | ✅ | ❌ "correct as-is" | ❌ **rejected** | The `or 3` fallback already handles it; Codex (#3) explicitly blessed it. No-op. |
+| 6 | `markerDur` not reset on expiry (only OnHide) | ✅ | — | ❌ **already done** | iter-4 code already resets it in the expiry branch (timers.lua:146). GLM missed the existing line. |
+| N1 | Energy cost 25, GetComboPoints sig, `>=1` gate, perf, dynamic green-on, Expose gating | ✅ confirm | ✅ confirm | ✅ no-op | Both independently confirmed everything I got right. |
+
+**Lesson (the big one):** had I blindly applied GLM's review this round, I'd have (a) injected a *factually wrong* "TBC has pandemic" comment into the code, (b) possibly rewritten working `RegisterUnitEvent` calls, and (c) added a fragile speculative energy-predictor. **Codex as the independent verifier caught GLM's drift on every count.** This is exactly why the golden rule is "triangulate, do not blindly defer" — a single model, even a strong one, drifts and contradicts itself across sessions. The cross-check is the safety net.
+
+Also: pre-build red-team killed the "poison-type awareness" roadmap item — `GetWeaponEnchantInfo` in 2.5.x exposes no enchant ID, so the applied poison can't be named. Marked infeasible.
+
+---
+
 ## Iteration 4 — 2026-06-27 — Refresh-now marker on timer bars (v1.4.0)
 
 Added a "refresh-now" marker + final-window green on the SnD/DoT bars. **Pre-build red-team caught my own roadmap error**: it said "pandemic ~30%", but TBC 2.5.x has no pandemic — early refresh clips. Reframed as refresh-before-expiry. GLM 6 findings, Codex 6. Raw: `reviews/glm/iter4.md`, `reviews/codex/iter4.md`.
