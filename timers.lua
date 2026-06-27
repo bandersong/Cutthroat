@@ -49,10 +49,10 @@ local function GetAura(unit, name, byPlayer)
             n, dur, exp = d.name, d.duration, d.expirationTime
         else
             -- UnitAura: name(1) icon count debuffType duration(5) expirationTime(6) ...
-            local dur2, exp2
-            n, _, _, _, dur2, exp2 = UnitAura(unit, i, filter)
+            -- pack the returns (no bare `_` throwaways, which leak a global on 5.1)
+            local a = { UnitAura(unit, i, filter) }
+            n, dur, exp = a[1], a[5], a[6]
             if not n then break end
-            dur, exp = dur2, exp2
         end
         if n == name and exp and exp > 0 then
             return exp, dur   -- absolute expiration time + full duration
