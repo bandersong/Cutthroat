@@ -6,6 +6,20 @@ Legend: ✅ accepted (verified real) · ❌ rejected (false/hallucinated) · ⏳
 
 ---
 
+## Iteration 6 — 2026-06-27 — Combo-point overcap glow (v1.6.0)
+
+Pip row pulses gold at max CP so you finish instead of overcapping. **Cleanest round yet — Codex found zero correctness bugs; GLM found zero bugs + two polish suggestions.** Convergence on quality. Raw: `reviews/glm/iter6.md`, `reviews/codex/iter6.md`.
+
+| # | Finding | GLM | Codex | Verdict | Notes |
+|---|---------|:---:|:----:|---------|-------|
+| 1 | Solid `SetColorTexture` flashes as a harsh box → `SetBlendMode("ADD")` for a soft glow | ✅ | — | ✅ **applied** | GLM-unique aesthetic; valid 2.5.x method, Codex neutral. Low-risk polish. |
+| 2 | Target-drop could leave the glow lingering → guard `UnitExists("target")` | ✅ "ghosts" | ❌ "already hides" | ✅ **applied (defensive)** | **Disagreement.** Codex says no-target → `GetComboPoints`=0 so it already hides (ground-truth-correct). The guard is harmless either way and matches the addon's existing target-guard pattern → added for clarity, not blind deference. |
+| N1 | MAX_CP=5 correct; GetComboPoints sig; BACKGROUND<ARTWORK layering; math.sin/GetTime; event+render idempotent; cp>=5 UX | ✅ | ✅ | ✅ no-op | Both independently confirmed every design choice. Both explicitly warned: don't add "is a finisher worth it" logic — that's rotation automation, violates read-only. |
+
+**Lesson:** as the codebase matures, reviews converge toward "no bugs, minor polish" — the signal that the triangulation loop is reaching diminishing returns on this surface. The one disagreement (#2) was resolved by recognizing the fix is safe under *both* interpretations, so correctness doesn't hinge on settling it. Also: both models proactively guarded the read-only boundary (no rotation logic), which is the addon's core safety invariant.
+
+---
+
 ## Iteration 5 — 2026-06-27 — Resource-aware refresh cue (v1.5.0)
 
 The green "refresh-now" fill now only lights when you can actually refresh (CP/energy/live target). `/cut smart` toggle. **This round is the strongest case yet for triangulation: GLM produced 4 false positives, Codex cleared them and added the one real catch.** Raw: `reviews/glm/iter5.md`, `reviews/codex/iter5.md`.

@@ -18,6 +18,7 @@ local function Help()
     print("  |cffffff00/cut spark|r        toggle energy regen-tick spark")
     print("  |cffffff00/cut zone|r         toggle refresh-now marker on bars")
     print("  |cffffff00/cut smart|r        green only when CP/energy ready")
+    print("  |cffffff00/cut finish|r       toggle max-CP overcap glow")
     print("  |cffffff00/cut snd N|r        SnD warning seconds")
     print("  |cffffff00/cut rup N|r        Rupture warning seconds")
     print("  |cffffff00/cut reset|r        reset position")
@@ -57,6 +58,8 @@ function Config:Init()
             db.refreshZone = not db.refreshZone; Print("refresh marker " .. on(db.refreshZone))
         elseif cmd == "smart" then
             db.smartRefresh = not db.smartRefresh; Print("smart refresh (CP/energy-gated) " .. on(db.smartRefresh))
+        elseif cmd == "finish" then
+            db.cpFinishGlow = not db.cpFinishGlow; Print("max-CP overcap glow " .. on(db.cpFinishGlow))
         elseif cmd == "snd" then
             local n = tonumber(arg); if n then db.sndWarn = n; Print("SnD warn at " .. n .. "s") end
         elseif cmd == "rup" then
@@ -65,8 +68,10 @@ function Config:Init()
             db.point = { "CENTER", nil, "CENTER", 0, -180 }
             Print("position reset (/reload to apply)")
         elseif cmd == "status" then
-            Print(string.format("locked %s | scale %.2f | kick %s | poison %s | opener %s | sound %s | ticks %s | spark %s | zone %s | smart %s",
-                tostring(db.locked), db.scale, on(db.kickAlert), on(db.poisonCheck), on(db.openerHint), on(db.sound), on(db.energyTicks), on(db.tickSpark), on(db.refreshZone), on(db.smartRefresh)))
+            Print(string.format("locked %s | scale %.2f | kick %s | poison %s | opener %s | sound %s",
+                tostring(db.locked), db.scale, on(db.kickAlert), on(db.poisonCheck), on(db.openerHint), on(db.sound)))
+            Print(string.format("ticks %s | spark %s | zone %s | smart %s | finish %s",
+                on(db.energyTicks), on(db.tickSpark), on(db.refreshZone), on(db.smartRefresh), on(db.cpFinishGlow)))
         else
             Help()
         end

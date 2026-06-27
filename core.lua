@@ -20,6 +20,7 @@ local defaults = {
     tickSpark = true,   -- moving spark = progress to next ~2s energy regen tick
     refreshZone = true, -- mark the "refresh now" window near expiry on SnD/DoT bars
     smartRefresh = true,-- only turn the bar green when you have CP/energy to refresh
+    cpFinishGlow = true,-- pulse the combo pips at max CP (don't overcap -> finish)
 }
 
 -- ---- Class gate ----

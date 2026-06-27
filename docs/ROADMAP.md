@@ -7,7 +7,8 @@
 - [x] **Energy tick predictor**: spark marks progress to the next energy regen tick; self-calibrating interval. *(shipped v1.3.0, iter 3)*
 - [x] **SnD/Rupture refresh-window marker**: ~~pandemic 30%~~ corrected — TBC has no pandemic, so a "refresh-now" marker at the warn threshold + green final-window cue. *(shipped v1.4.0, iter 4)*
 - [x] **Resource-aware refresh cue**: bar only turns green when you have the CP/energy (and a live target) to refresh. `/cut smart` toggle. *(shipped v1.5.0, iter 5)*
-- [ ] **Spec detection**: read talents, adjust finisher durations (SnD/Rupture scale with talents like Improved SnD).
+- [x] **Combo-point overcap glow**: pip row pulses gold at max CP so you finish instead of wasting generation. `/cut finish` toggle. *(shipped v1.6.0, iter 6)*
+- [~] **Spec detection for finisher durations**: DROPPED as low-value — the timer bars already read the *real* aura duration from the game, so Improved SnD etc. is already reflected without computing it from talents.
 
 ## Mid-term
 - [ ] **Combat log DPS/energy efficiency mini-readout.**

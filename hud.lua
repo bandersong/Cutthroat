@@ -87,6 +87,15 @@ function HUD:Init()
         self.pips[i] = pip
     end
 
+    -- "finish now" glow behind the pip row: pulses gold at max combo points so you
+    -- spend them instead of overcapping (building past 5 CP is wasted generation).
+    self.cpGlow = root:CreateTexture(nil, "BACKGROUND")
+    self.cpGlow:SetPoint("TOPLEFT", self.pips[1], "TOPLEFT", -3, 3)
+    self.cpGlow:SetPoint("BOTTOMRIGHT", self.pips[MAX_CP], "BOTTOMRIGHT", 3, -3)
+    self.cpGlow:SetColorTexture(1, 0.82, 0, 1)
+    self.cpGlow:SetBlendMode("ADD") -- additive => soft glow, not a harsh solid box
+    self.cpGlow:Hide()
+
     -- Event-driven power updates, all unit-filtered to "player" so other units'
     -- power changes never wake this handler. Combo points have no reliable
     -- cross-version event (UNIT_COMBO_POINTS vs UNIT_POWER_UPDATE differ by build,
@@ -146,9 +155,20 @@ function HUD:UpdateEnergyTick()
 end
 
 function HUD:UpdateCP()
-    local cp = GetComboPoints("player", "target") or 0
+    -- guard on a live target so the glow can't linger after detarget
+    local cp = UnitExists("target") and (GetComboPoints("player", "target") or 0) or 0
     for i = 1, MAX_CP do
         self.pips[i]:SetAlpha(i <= cp and 1.0 or 0.15)
+    end
+    -- finish-now glow at max CP (pulsed; called every render so the sine is smooth)
+    local g = self.cpGlow
+    if g then
+        if cp >= MAX_CP and NS.db.cpFinishGlow then
+            g:SetAlpha(0.15 + 0.30 * (0.5 + 0.5 * math.sin(GetTime() * 5)))
+            if not g:IsShown() then g:Show() end
+        elseif g:IsShown() then
+            g:Hide()
+        end
     end
 end
 

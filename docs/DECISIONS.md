@@ -14,6 +14,20 @@ Success criteria for the addon: loads clean on a TBC Anniversary client, zero Lu
 
 ---
 
+## Iteration 6 — 2026-06-27 — Combo-point overcap glow (v1.6.0)
+
+**What:** The combo-point pip row pulses gold when you're at max combo points (5), nudging you to spend them on a finisher instead of overcapping (building past 5 is wasted generation = lost DPS). `/cut finish` toggle. Read-only — it's a cue, not rotation advice.
+
+**Triangulation:** the cleanest round so far — **Codex found zero correctness bugs; GLM found zero bugs plus two polish ideas.** Both independently confirmed every design choice (5 is the TBC cap, the API call, the BACKGROUND-behind-ARTWORK layering, the per-frame pulse cost) and both proactively warned against adding "is a finisher worth it" logic, since that would cross into rotation automation and break the read-only contract.
+
+**Applied (polish):**
+1. `SetBlendMode("ADD")` on the glow so it reads as a soft additive glow rather than a harsh opaque box (GLM).
+2. Guard `UnitExists("target")` before reading combo points, so the glow can't linger after you drop target. Codex judged this unnecessary (no-target already returns 0 CP) but it's harmless and matches the addon's existing target-guard pattern.
+
+**Dropped from roadmap:** "spec detection for talent-aware finisher durations" — low value, because the timer bars already display the real aura duration straight from the game, so talents like Improved SnD are reflected automatically.
+
+---
+
 ## Iteration 5 — 2026-06-27 — Resource-aware refresh cue (v1.5.0)
 
 **What:** The green "refresh-now" fill on the timer bars now only lights when you can actually act on it — SnD needs ≥25 energy; Rupture/Expose need ≥25 energy + ≥1 combo point + a live attackable target; Garrote never cues green (it's a stealth opener, not refreshable in combat). New `/cut smart` toggle (on by default) to disable the gating if you prefer pure-time green.
