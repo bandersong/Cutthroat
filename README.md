@@ -1,5 +1,7 @@
 # Cutthroat — Rogue helper for WoW TBC Classic (2.5.x)
 
+[![CI](https://github.com/bandersong/Cutthroat/actions/workflows/ci.yml/badge.svg)](https://github.com/bandersong/Cutthroat/actions/workflows/ci.yml)
+
 A lightweight, **ban-safe** rogue HUD + alert addon. It **only reads game state and draws UI** — it never casts, queues, or presses a key for you, and uses no secure/protected frames. (Anything that auto-inputs spells is a Warden ban risk; this does none of that. Verified read-only by repeated GLM + Codex audits.)
 
 > ⚠️ **Status:** feature-complete and code-audited, but **not yet tested in a live client.** Run `docs/SMOKE_TEST.md` in-game before relying on it. See "Verification" below.
@@ -50,7 +52,9 @@ Move the HUD: `/cut lock` to unlock, drag the dark box, `/cut lock` again. Setti
 No `CastSpellByName`/`UseAction`/`RunMacro`/`RunScript`, no `SecureActionButton`, no hardware-event simulation, no combat attribute mutation. It reacts to events (`UNIT_POWER`, `UNIT_AURA`, `UNIT_SPELLCAST_*`, `SPELL_UPDATE_COOLDOWN`, …) and draws frames. `InCombatLockdown()` is used only to suppress the poison nag in combat.
 
 ## Verification
-This addon can't be run headlessly, so the build process only proves it **parses clean** (`luac -p`) with **no leaked globals** (`luac -l` bytecode check). Real behavior must be checked in-game with the checklist in **`docs/SMOKE_TEST.md`**.
+Two layers, neither a substitute for the other:
+1. **Automated (CI, every push):** `luac5.1 -p` syntax check + a no-leaked-globals bytecode audit + a **headless test harness** (`test/run.lua`, 83 checks) that stubs the WoW API and actually *runs* the addon through its lifecycle, gameplay, slash commands, corrupt-SavedVariables, and non-rogue paths — on **real Lua 5.1** (WoW's runtime). Run locally with `lua5.1 test/run.lua`. The mock errors on any unknown frame method or event, so it catches typo'd/nonexistent API and bad event names.
+2. **Manual (still required):** the harness can't render frames or reproduce real client timing, so visual/layout correctness must be checked in-game with **`docs/SMOKE_TEST.md`**.
 
 ## How it was built
 Hardened by a recurring **GLM + Codex triangulation loop** — each change is reviewed independently by two different models, their findings diffed, and only verified fixes applied. The full record is in `docs/`:

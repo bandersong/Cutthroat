@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # WoW TBC Classic runs a Lua 5.1-derived VM, so test on real 5.1 — this
+      # catches 5.1 incompatibilities a 5.4/5.5 host would silently allow.
+      - name: Install Lua 5.1
+        run: sudo apt-get update && sudo apt-get install -y lua5.1
+
+      - name: Syntax check (luac -p) all modules
+        run: for f in *.lua; do echo "checking $f"; luac5.1 -p "$f"; done
+
+      - name: No leaked globals (bytecode SETGLOBAL audit)
+        run: |
+          fail=0
+          for f in *.lua; do
+            leaks=$(luac5.1 -l -p "$f" | grep -i SETGLOBAL | grep -vE 'SLASH_CUTTHROAT|CutthroatDB|SlashCmdList' || true)
+            if [ -n "$leaks" ]; then echo "LEAK in $f:"; echo "$leaks"; fail=1; fi
+          done
+          exit $fail
+
+      - name: Headless regression tests
+        run: lua5.1 test/run.lua

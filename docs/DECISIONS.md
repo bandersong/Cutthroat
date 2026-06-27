@@ -14,6 +14,27 @@ Success criteria for the addon: loads clean on a TBC Anniversary client, zero Lu
 
 ---
 
+## Iteration 10 — 2026-06-27 — Headless test harness + CI (the grounding iteration)
+
+**What:** Built `test/run.lua` — a headless test harness that stubs the WoW 2.5.x API, loads every module, and actually *runs* the addon through its lifecycle, gameplay, all slash commands, a corrupt-SavedVariables scenario, and the non-rogue path (83 checks). Added `.github/workflows/ci.yml` so every push runs `luac5.1 -p` + a leaked-globals audit + the harness **on real Lua 5.1** (WoW's runtime).
+
+**Why this mattered most:** for nine iterations the addon had never been executed — only parsed and read by two LLMs. That's the "echo chamber" GLM kept warning about. This re-anchors verification to execution. The very first run proved the point: it failed on a missing mock for `GetInventoryItemLink` — a real API the addon uses correctly — i.e., the harness immediately surfaced a real dependency.
+
+**Hardening from the GLM+Codex review of the harness itself:**
+- Replaced the permissive no-op mock with a **method table**: known frame methods resolve, unknown keys return nil — so a typo'd or nonexistent API call now errors, and unset data fields read as nil (the old mock returned a truthy function, quietly corrupting boolean logic).
+- Added a **valid-event allowlist**: registering an unknown event fails the test — automatic regression protection for the `PLAYER_TALENT_UPDATE` bug we hit in iter 2.
+- **Scenario isolation** (`resetWorld()`): separate rogue / corrupt-DB / non-rogue runs that no longer cross-contaminate.
+- **Behavioral assertions**, not just "didn't crash": db mutates after a slash toggle, poison text names the right hand, cooldowns desaturate while on CD, corrupt `point`/`scale` get sanitized, non-rogue skips the HUD.
+- **CI on Lua 5.1** resolves the host-runtime fidelity gap (couldn't run 5.1 locally).
+
+**Rejected:** GLM's strict `_G` read-error (would break the addon's deliberate optional-global probing like `Enum and …`).
+
+**Self-corrected:** the hardened harness flagged 2 assertions — both were *my test bugs* (wrong field; wrong expectation for a hidden icon), not addon bugs. Fixed → 83/0.
+
+**Honest labeling:** the harness docstring now states plainly what it does and does not prove. It does not replace the in-client smoke test (`docs/SMOKE_TEST.md`) — it can't render frames or reproduce real client timing.
+
+---
+
 ## Iteration 9 — 2026-06-27 — Documentation brought current (v1.7.0, no code change)
 
 **What:** Rewrote `README.md` (it was frozen at v1.0.0 and missing eight versions of features and commands) and added `CHANGELOG.md`. Then ran the triangulation loop as an **accuracy check** — verifying every doc claim against the actual code, since stale/wrong docs are their own kind of bug.

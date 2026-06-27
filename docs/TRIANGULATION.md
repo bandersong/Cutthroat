@@ -6,6 +6,26 @@ Legend: ✅ accepted (verified real) · ❌ rejected (false/hallucinated) · ⏳
 
 ---
 
+## Iteration 10 — 2026-06-27 — Headless test harness + CI (execution ground truth)
+
+The loop's real weakness: 9 rounds of parse-check + LLM opinion, but the addon had **never executed**. Built `test/run.lua` — stubs the WoW API, loads all modules, runs lifecycle/gameplay/slash/edge paths, asserts behavior. First run: 42/10. The 10 failures traced to **one missing mock global** (`GetInventoryItemLink`, a real 2.5.x API the addon correctly uses) — i.e., the harness *worked*, surfacing a real dependency. After the stub: 52/0, then both models adversarially reviewed the harness itself. Raw: `reviews/glm/iter10.md`, `reviews/codex/iter10.md`.
+
+| # | Finding | GLM | Codex | Verdict | Notes |
+|---|---------|:---:|:----:|---------|-------|
+| 1 | No-op `__index` masks bad API calls + (my realization) returns a truthy fn for unset data fields, corrupting boolean logic | ✅ | ✅ | ✅ **applied** | Both ranked #1. Rewrote the mock as a **method table**: known methods resolve, unknown keys → nil (typo'd method calls now error; unset data fields read nil correctly). |
+| 2 | No event-name validation | ✅ | (implied) | ✅ **applied** | Added a 2.5.x event allowlist; `RegisterEvent` errors on an unknown event — auto-regression for the iter-2 `PLAYER_TALENT_UPDATE` bug class. |
+| 3 | Lua 5.1 vs 5.5 host → green-here ≠ works-in-WoW | ✅ | ✅ | ✅ **applied** | Can't run 5.1 locally, so the **CI runs on real `lua5.1`** — resolves the fidelity gap automatically on every push. |
+| 4 | State contamination between scenarios (shared frames/globals/DB) | — | ✅ | ✅ **applied** | Codex-only. Added `resetWorld()`; split into 3 isolated scenarios (rogue / corrupt-DB / non-rogue). |
+| 5 | Tautological "no-error" asserts; want behavioral + negative cases | ✅ | ✅ | ✅ **applied** | Added: db-mutation-after-slash, poison text content, cooldown desaturation, corrupt-SavedVariables sanitization, non-rogue gating. |
+| 6 | Strict `_G` read-error on any unmocked global | ✅ | — | ❌ **rejected** | Would break the addon's *legitimate* optional-global probing (`Enum and …`, `C_UnitAuras and …`). Wrong for this code. |
+| N1 | Honestly relabel "execution ground truth" → smoke/regression | ✅ | ✅ | ✅ **applied** | Both. Docstring now states exactly what it does and does NOT prove. |
+
+**Self-caught (red-team of my own tests):** after hardening, 2 asserts failed — both were *my test bugs* (asserted `_desat` on the icon frame instead of its texture; expected a hidden icon to be `nil` instead of created-but-hidden), not addon bugs. Fixed → **83/0**. The harness being strict enough to catch wrong assertions is the point.
+
+**Lesson — the most important of the whole loop:** GLM kept warning "upward without grounding = confident bullshit," and it was right. Nine iterations of two models agreeing on Lua they never ran is exactly the echo chamber. This iteration re-anchors the loop to **execution** (and CI on the real runtime). From here, "ship-ready" means *tests pass on Lua 5.1*, not *two models think it looks fine*.
+
+---
+
 ## Iteration 9 — 2026-06-27 — Docs brought current + accuracy-checked (v1.7.0)
 
 No code change — rewrote the stale README (was frozen at v1.0.0, missing 8 versions of features) and added `CHANGELOG.md`, then used the loop to **verify the docs against the actual code** (doc-vs-code drift is a real bug class). Raw: `reviews/glm/iter9.md`, `reviews/codex/iter9.md`.

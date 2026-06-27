@@ -16,6 +16,7 @@
 - [x] **Graphical options panel** (`options.lua`): checkboxes + scale slider in Interface → AddOns; `/cut config`. *(shipped v1.7.0, iter 8)*
 - [ ] **Localization scaffold** (enUS strings table → other locales). *(deferred — low value for a 2-person enUS addon; revisit only if shared publicly)*
 - [x] **In-client smoke test checklist** → `docs/SMOKE_TEST.md` (merged from the iter-7 GLM+Codex audit). *(iter 7)*
+- [x] **Headless test harness + CI** → `test/run.lua` (83 checks, strict WoW-API mock) run on real Lua 5.1 via `.github/workflows/ci.yml` on every push. *(iter 10)*
 
 ## Verification debt (loop can't run WoW — needs friend/in-client)
 - [ ] Confirm `## Interface:` matches the live Anniversary build (`/dump select(4,GetBuildInfo())`).
