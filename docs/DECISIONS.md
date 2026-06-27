@@ -14,6 +14,16 @@ Success criteria for the addon: loads clean on a TBC Anniversary client, zero Lu
 
 ---
 
+## Iteration 13 — 2026-06-27 — Localization completeness verified; loop concluded
+
+**What:** No code change. Exhaustively audited every locale-sensitive surface to confirm the iter-12 timers fix didn't leave sibling bugs (per the "enumerate, don't react" principle). Result: **the localization bug class is fully closed** — all spell/aura name handling resolves via `GetSpellInfo`/spell IDs (timers, cooldowns, Kick); every remaining string comparison is event names, `type()` checks, internal keys, or unit/class tokens — none locale-sensitive. The only English left is options-panel UI labels (full UI translation is intentionally out of scope — gold-plating for a 2-person enUS addon).
+
+**Decision — loop concluded here.** After 13 iterations the addon is feature-complete, ban-safe, locale-correct, documented, and verified by 124 headless regression tests green on real Lua 5.1 via CI. There is no further autonomous code work with real value — the one remaining gap (in-client visual verification, `docs/SMOKE_TEST.md`) can only be done by a human at a WoW client. Continuing the 10-minute loop on unchanged code would be motion, not progress, so the recurring job was stopped. Re-start anytime with `/loop`, or point it at a new target.
+
+**Final state:** v1.7.1 · 7 modules · 124 tests · CI green · github.com/bandersong/Cutthroat.
+
+---
+
 ## Iteration 10 — 2026-06-27 — Headless test harness + CI (the grounding iteration)
 
 **What:** Built `test/run.lua` — a headless test harness that stubs the WoW 2.5.x API, loads every module, and actually *runs* the addon through its lifecycle, gameplay, all slash commands, a corrupt-SavedVariables scenario, and the non-rogue path (83 checks). Added `.github/workflows/ci.yml` so every push runs `luac5.1 -p` + a leaked-globals audit + the harness **on real Lua 5.1** (WoW's runtime).
