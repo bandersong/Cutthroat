@@ -2,6 +2,9 @@
 
 All notable changes to Cutthroat. Each version was hardened by an independent GLM + Codex review (see `docs/TRIANGULATION.md`).
 
+## [1.7.1] — 2026-06-27
+- **Localization fix:** the timer bars (SnD/Rupture/Expose/Garrote) hardcoded English aura names and compared them against `UnitAura`, which returns *localized* names — so on non-enUS clients the timers silently never appeared. Now resolves the localized name from the spell ID via `GetSpellInfo` at load (matching how the cooldown row already worked). Caught by the iter-12 convergence audit (Codex). Regression-tested with a simulated German aura name.
+
 ## [1.7.0] — 2026-06-27
 - **Graphical options panel** in Interface → AddOns (checkboxes + scale slider), opened with `/cut config`. Built on the legacy `InterfaceOptions_*` API correct for TBC 2.5.x.
 

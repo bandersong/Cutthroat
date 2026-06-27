@@ -162,7 +162,9 @@ end
 function GetSpellTexture() return "Interface\\Icons\\x" end
 local spellNames = { [1856] = "Vanish", [5277] = "Evasion", [2983] = "Sprint",
     [13877] = "Blade Flurry", [13750] = "Adrenaline Rush", [14177] = "Cold Blood",
-    [14185] = "Preparation", [1766] = "Kick" }
+    [14185] = "Preparation", [1766] = "Kick",
+    -- timer finishers (resolved locale-safely by timers.lua via GetSpellInfo)
+    [5171] = "Slice and Dice", [1943] = "Rupture", [8647] = "Expose Armor", [703] = "Garrote" }
 function GetSpellInfo(id) return spellNames[id], nil, "tex" end
 function GetSpellName(i)
     local list = {}
@@ -435,6 +437,23 @@ local ok_reinit = pcall(function() hud:Init(); tmr:Init(); cds:Init(); NS4.modul
 check("re-Init() does not error", ok_reinit)
 check("re-Init() creates no new frames (guarded)", #allFrames == before)
 check("re-Init() keeps same hud.root", hud.root == root1)
+
+-- ===================== Scenario 5: localization (non-enUS aura names) =====================
+print("== Scenario: localization ==")
+resetWorld()
+freshState()
+-- simulate a German client: SnD's localized name. The addon must resolve TRACK
+-- names via GetSpellInfo (id 5171) and match the LOCALIZED aura, not hardcoded enUS.
+spellNames[5171] = "Säbelrasseln"
+local NS5 = {}
+loadAll(NS5)
+fire("ADDON_LOADED", "Cutthroat"); fire("PLAYER_LOGIN")
+check("TRACK.snd resolved to localized name", NS5.modules.timers and
+    select(1, GetSpellInfo(5171)) == "Säbelrasseln")
+state.auras.player = { { name = "Säbelrasseln", dur = 21, exp = GetTime() + 10, harmful = false, byPlayer = true } }
+fire("UNIT_AURA", "player"); tick(0.06)
+check("SnD detected by LOCALIZED aura name (non-enUS)", NS5.modules.timers.bars.snd._shown)
+spellNames[5171] = "Slice and Dice" -- restore for any later use
 
 -- ===================== summary =====================
 print(string.format("\n== RESULT: %d passed, %d failed ==", ok_count, fail_count))

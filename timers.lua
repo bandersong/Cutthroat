@@ -7,12 +7,15 @@ local Timers = NS:RegisterModule("timers", {})
 
 -- spellID -> { label, base, perCP (optional) }  durations are *max* (5cp) approximations;
 -- we read the real remaining time from auras when possible, CLEU is the fallback.
+-- Track by spellID and resolve the LOCALIZED name at init (GetSpellInfo), so the
+-- timers work on non-enUS clients too — UnitAura returns localized aura names, so
+-- comparing against hardcoded English would silently fail abroad. (cooldowns.lua
+-- already does this; keeping timers consistent.) fallback = enUS if lookup fails.
 local TRACK = {
-    -- Slice and Dice ranks share name; track by name (self buff)
-    snd = { name = "Slice and Dice", isSelf = true,  color = "good" },
-    rup = { name = "Rupture",        isSelf = false, color = "bad"  },
-    exp = { name = "Expose Armor",   isSelf = false, color = "warn" },
-    gar = { name = "Garrote",        isSelf = false, color = "bad"  },
+    snd = { spellID = 5171, fallback = "Slice and Dice", isSelf = true,  color = "good" },
+    rup = { spellID = 1943, fallback = "Rupture",        isSelf = false, color = "bad"  },
+    exp = { spellID = 8647, fallback = "Expose Armor",   isSelf = false, color = "warn" },
+    gar = { spellID = 703,  fallback = "Garrote",        isSelf = false, color = "bad"  },
 }
 
 local BAR_W, BAR_H = 200, 14
@@ -71,6 +74,10 @@ local SOURCE = {
 
 function Timers:Init()
     if self.bars then return end -- idempotent: never double-init frames/scripts
+    -- resolve localized aura names once (player is logged in by now)
+    for _, t in pairs(TRACK) do
+        t.name = GetSpellInfo(t.spellID) or t.fallback
+    end
     local root = NS.modules.hud.root
     self.bars = {}
     self.cache = {} -- key -> { exp = absolute, dur = full }

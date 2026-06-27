@@ -6,6 +6,21 @@ Legend: ✅ accepted (verified real) · ❌ rejected (false/hallucinated) · ⏳
 
 ---
 
+## Iteration 12 — 2026-06-27 — Convergence audit → caught a real non-enUS bug (v1.7.1)
+
+A skeptical, anti-gold-plating ship-readiness audit ("say NO REAL ISSUES if there's nothing — don't manufacture work"). The two models **split**, and that split was the whole value:
+
+| | verdict |
+|---|---|
+| **GLM** | "NO REAL ISSUES — SHIP IT." Praised the architecture, ban-safety, all prior fixes. Missed the bug below. |
+| **Codex** | "ONE REAL CORRECTNESS ISSUE." `timers.lua` hardcoded **English** aura names and compared them to `UnitAura` results, which are **localized** → on deDE/frFR/etc. the core timers silently never fire. |
+
+**Verified + fixed (Codex right):** the bug is real and `cooldowns.lua` *already* resolved names locale-safely via `GetSpellInfo`, so timers were the inconsistent module. Switched TRACK to spellID + `GetSpellInfo`-resolved localized name (fallback enUS). Added a localization regression test (simulated German "Säbelrasseln" SnD → detected). 115 → **124 checks**, green on CI/5.1.
+
+**Lesson — the single best argument for the whole loop:** had I trusted GLM's confident "ship it," a public addon would have shipped broken for every non-English player. One model's confidence is not ground truth; the independent skeptic caught what the optimist missed. This is *exactly* "🔍 convenient = bug till proven" and "🤖 triangulate, do not blindly defer." Convergence wasn't reached — and that's more useful than a false convergence would have been.
+
+---
+
 ## Iteration 11 — 2026-06-27 — Deep regression coverage (93 → 115 checks)
 
 Added behavioral + negative regression tests that lock the logic past iterations fixed, then triangulated for *coverage gaps*. GLM and Codex independently named the **same top 3** (aura filter, real-duration scaling, tick calibration) — Codex more precise (and it knew `maxSeen` was already removed; GLM's #3 assert referenced the dead variable). Raw: `reviews/glm/iter11.md`, `reviews/codex/iter11.md`.
