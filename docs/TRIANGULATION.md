@@ -6,6 +6,23 @@ Legend: ✅ accepted (verified real) · ❌ rejected (false/hallucinated) · ⏳
 
 ---
 
+## Iteration 9 — 2026-06-27 — Docs brought current + accuracy-checked (v1.7.0)
+
+No code change — rewrote the stale README (was frozen at v1.0.0, missing 8 versions of features) and added `CHANGELOG.md`, then used the loop to **verify the docs against the actual code** (doc-vs-code drift is a real bug class). Raw: `reviews/glm/iter9.md`, `reviews/codex/iter9.md`.
+
+| # | Finding | GLM | Codex | Verdict | Notes |
+|---|---------|:---:|:----:|---------|-------|
+| 1 | README says "Bars flash" but code only recolors the **label** + sound | — | ✅ | ✅ **applied** | Codex-only, precise. Reworded to "label turns red + sound." |
+| 2 | "green when CP + energy" is imprecise (SnD is energy-only) | — | ✅ | ✅ **applied** | Codex-only. Reworded to the exact per-aura rule. |
+| 3 | `/cut options` alias undocumented | ✅ | ✅ | ✅ **applied** | Both. Noted as alias of `/cut config`. |
+| 4 | `/cutthroat` slash alias undocumented | — | ✅ | ✅ **applied** | Codex-only. Added a note. |
+| 5 | "kick/poison/opener missing from README table AND Help()" | ✅ | — | ❌ **rejected (false)** | Verified directly: README table has all three; `Help()` prints all three. GLM was simply wrong. |
+| 6 | "RunScript may leak via InterfaceOptions XML templates" | ✅ | — | ❌ **rejected (false FUD)** | Speculation ("while not explicitly listed in the snippets…"). Grepped all lua: zero banned functions. |
+
+**Lesson:** Codex clearly outperformed GLM on this factual-accuracy pass — 4 precise, code-grounded catches vs GLM's 1 real + 2 false positives (one a verifiable wrong claim, one evidence-free FUD). Reinforces the pattern across the whole loop: GLM is a useful idea generator but drifts/hallucinates on specifics, so **every GLM finding gets verified against ground truth before action** — which is exactly the "triangulate, don't blindly defer" rule. A built install zip (`~/WoWAddons/Cutthroat.zip`) now bundles the addon + user docs, excluding internal review/prompt artifacts.
+
+---
+
 ## Iteration 8 — 2026-06-27 — Graphical options panel (v1.7.0)
 
 Added `options.lua` — an Interface → AddOns panel (checkboxes + scale slider) so the non-technical end user isn't stuck memorizing 9 slash toggles. The whole point was verifying the **version-specific options API** (legacy `InterfaceOptions_*` for 2.5.x, NOT the retail `Settings.*`). Raw: `reviews/glm/iter8.md`, `reviews/codex/iter8.md`.

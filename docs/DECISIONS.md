@@ -14,6 +14,23 @@ Success criteria for the addon: loads clean on a TBC Anniversary client, zero Lu
 
 ---
 
+## Iteration 9 — 2026-06-27 — Documentation brought current (v1.7.0, no code change)
+
+**What:** Rewrote `README.md` (it was frozen at v1.0.0 and missing eight versions of features and commands) and added `CHANGELOG.md`. Then ran the triangulation loop as an **accuracy check** — verifying every doc claim against the actual code, since stale/wrong docs are their own kind of bug.
+
+**Why now:** the addon is feature-complete and ship-ready per both models; adding another marginal feature would be noise. Accurate, complete docs are the higher-value "upward" move and make the thing actually usable by someone who didn't write it.
+
+**Doc fixes from the review (all Codex catches; GLM had two false positives this round):**
+1. "Bars flash" → "label turns red + sound" (the code recolors the label, it doesn't flash the bar).
+2. Made the green-refresh rule precise: energy for SnD; energy + a combo point + a live target for Rupture/Expose; never for Garrote.
+3. Documented the `/cut options` alias and the `/cutthroat` slash alias.
+
+**Rejected (verified false):** GLM claimed `kick`/`poison`/`opener` were missing from the README table and the in-game `Help()` — both actually list all three. GLM also speculated that `RunScript` might leak via Interface-options XML templates — a grep of every Lua file found zero banned functions.
+
+**Artifact:** rebuilt the installable zip at `~/WoWAddons/Cutthroat.zip` (addon + user docs; excludes the internal `reviews/` and `prompts/` dev artifacts).
+
+---
+
 ## Iteration 8 — 2026-06-27 — Graphical options panel (v1.7.0)
 
 **What:** A real settings panel in Interface → AddOns (`options.lua`) — checkboxes for all 10 toggles plus a scale slider, opened with `/cut config`. So the friend can click instead of memorizing slash commands. Read-only over SavedVariables.
