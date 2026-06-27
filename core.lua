@@ -71,7 +71,8 @@ f:SetScript("OnEvent", function(self, event, arg1)
             local m = NS.modules[name]
             if m and m.Init then m:Init() end
         end
-        initModule("config") -- slash command / options work for everyone
+        initModule("config")  -- slash commands work for everyone
+        initModule("options") -- graphical settings panel works for everyone
         if playerClass == "ROGUE" then
             initModule("hud")
             initModule("timers")

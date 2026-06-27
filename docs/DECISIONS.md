@@ -14,6 +14,23 @@ Success criteria for the addon: loads clean on a TBC Anniversary client, zero Lu
 
 ---
 
+## Iteration 8 — 2026-06-27 — Graphical options panel (v1.7.0)
+
+**What:** A real settings panel in Interface → AddOns (`options.lua`) — checkboxes for all 10 toggles plus a scale slider, opened with `/cut config`. So the friend can click instead of memorizing slash commands. Read-only over SavedVariables.
+
+**Why this over localization:** at a ship-ready milestone, a clickable settings panel is concrete value for an actual non-technical user; a localization scaffold for a 2-person enUS addon would be near-noise (heeded the recurring "don't add noise" warning).
+
+**The risk was the API:** the options-panel API is version-specific — TBC Classic 2.5.x uses the legacy `InterfaceOptions_AddCategory` / `InterfaceOptionsFrame_OpenToCategory`; the modern `Settings.*` API is retail 10.0+. Built on the legacy API with a guarded `Settings.*` fallback, then had both models verify every call against 2.5.x. **Both confirmed all of it** (templates, sub-region names, the double-call open workaround, panel.name/refresh hooks).
+
+**Fixes applied after review:**
+1. Slider title is set in Init (was blank until you first dragged it) — GLM.
+2. Dragging the scale slider now resizes the HUD live and cheaply (`hud.root:SetScale`) instead of firing a full module refresh on every step — Codex.
+3. `NS.db` nil-guards in Init/Load and a tighter guard on the unused Settings fallback — both, defensive.
+
+**Logged as smoke-test debt:** GLM and Codex disagreed on whether `OpenToCategory` lands on the right page with a frame vs a name argument in 2.5.x. The function accepts both and frame is standard (Codex-confirmed), so kept the frame — but added a smoke-test step with a ready one-line switch to `panel.name` if it misbehaves in-game.
+
+---
+
 ## Iteration 7 — 2026-06-27 — Full cross-module audit + hardening (v1.6.1)
 
 **What:** No new feature — a whole-addon integration audit (first review of all 7 files together) and the hardening it surfaced. Both GLM and Codex gave a ship-ready verdict.

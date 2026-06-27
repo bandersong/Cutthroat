@@ -6,6 +6,22 @@ Legend: ✅ accepted (verified real) · ❌ rejected (false/hallucinated) · ⏳
 
 ---
 
+## Iteration 8 — 2026-06-27 — Graphical options panel (v1.7.0)
+
+Added `options.lua` — an Interface → AddOns panel (checkboxes + scale slider) so the non-technical end user isn't stuck memorizing 9 slash toggles. The whole point was verifying the **version-specific options API** (legacy `InterfaceOptions_*` for 2.5.x, NOT the retail `Settings.*`). Raw: `reviews/glm/iter8.md`, `reviews/codex/iter8.md`.
+
+| # | Finding | GLM | Codex | Verdict | Notes |
+|---|---------|:---:|:----:|---------|-------|
+| 1 | All 8 of my 2.5.x API assumptions (AddCategory, OpenToCategory+double-call, UICheckButtonTemplate label `_G[..Text]`, OptionsSliderTemplate sub-regions, SetObeyStepOnDrag guard, panel.name/refresh, non-rogue safety) | ✅ confirm | ✅ confirm | ✅ verified | Both independently validated every API call against 2.5.x. The uncertainty that triggered this build is resolved. |
+| 2 | `OpenToCategory(frame)` may land on a generic page in 2.5.x → pass `panel.name` | ✅ | ❌ "frame is fine" | ⚖️ **kept frame, flagged for in-client** | Disagreement. Function accepts both; frame is the documented standard and Codex confirms it. Can't verify without a client → kept frame, added a smoke-test step to switch to name if it misbehaves. |
+| 3 | Slider title "Scale" only set on first drag → blank label on first open | ✅ | — | ✅ **applied** | GLM-unique, real. Title now set in Init. |
+| 4 | Slider fires full `CallAll("Refresh")` on every drag step | — | ✅ | ✅ **applied** | Codex-unique. Now applies scale live & cheaply (`hud.root:SetScale`) instead of a full refresh per step. |
+| 5 | `NS.db` nil guard in Init/Load; guard the Settings fallback | ✅ | ✅ | ✅ **applied** | Both (different spots). Cheap defensive. |
+
+**Lesson:** when a feature hinges on a version-specific API, triangulation is mostly *confirmation* — both models verifying the same calls against ground truth gives real confidence the legacy API choice is right for 2.5.x. The one disagreement (frame vs name) is genuinely unresolvable without a client, so it's logged as smoke-test debt with a ready fix, rather than guessed at.
+
+---
+
 ## Iteration 7 — 2026-06-27 — Full cross-module audit (v1.6.1)
 
 First whole-addon review (prior rounds saw one file each). Both gave a ship-ready verdict (GLM "ready for alpha/beta", Codex "conditionally ship-ready") + a smoke-test checklist. Raw: `reviews/glm/iter7.md`, `reviews/codex/iter7.md`.

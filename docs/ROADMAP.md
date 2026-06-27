@@ -13,7 +13,8 @@
 ## Mid-term
 - [ ] **Combat log DPS/energy efficiency mini-readout.**
 - [~] **Poison type awareness**: ~~name which poison is missing~~ — INFEASIBLE in 2.5.x: `GetWeaponEnchantInfo` returns has-enchant/expiry/charges but no enchant ID/name, so the applied poison can't be identified. Present/absent only.
-- [ ] **Localization scaffold** (enUS strings table → other locales).
+- [x] **Graphical options panel** (`options.lua`): checkboxes + scale slider in Interface → AddOns; `/cut config`. *(shipped v1.7.0, iter 8)*
+- [ ] **Localization scaffold** (enUS strings table → other locales). *(deferred — low value for a 2-person enUS addon; revisit only if shared publicly)*
 - [x] **In-client smoke test checklist** → `docs/SMOKE_TEST.md` (merged from the iter-7 GLM+Codex audit). *(iter 7)*
 
 ## Verification debt (loop can't run WoW — needs friend/in-client)

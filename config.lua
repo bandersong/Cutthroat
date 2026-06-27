@@ -21,6 +21,7 @@ local function Help()
     print("  |cffffff00/cut finish|r       toggle max-CP overcap glow")
     print("  |cffffff00/cut snd N|r        SnD warning seconds")
     print("  |cffffff00/cut rup N|r        Rupture warning seconds")
+    print("  |cffffff00/cut config|r       open the options panel")
     print("  |cffffff00/cut reset|r        reset position")
     print("  |cffffff00/cut status|r       show settings")
 end
@@ -64,6 +65,10 @@ function Config:Init()
             local n = tonumber(arg); if n then db.sndWarn = n; Print("SnD warn at " .. n .. "s") end
         elseif cmd == "rup" then
             local n = tonumber(arg); if n then db.ruptureWarn = n; Print("Rupture warn at " .. n .. "s") end
+        elseif cmd == "config" or cmd == "options" then
+            if NS.modules.options and NS.modules.options.Open then
+                NS.modules.options:Open()
+            end
         elseif cmd == "reset" then
             db.point = { "CENTER", nil, "CENTER", 0, -180 }
             Print("position reset (/reload to apply)")

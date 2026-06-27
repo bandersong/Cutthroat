@@ -31,6 +31,11 @@ Tip: run with **BugSack/BugGrabber** (or `/console scriptErrors 1`) so any Lua e
 - [ ] Remove weapon poisons out of combat: warning shows; enter combat: it hides.
 - [ ] Stealth + hostile target: "Opener: Ambush / Garrote" shows; unstealth/clear target: hides.
 
+## 5b. Options panel (iter 8)
+- [ ] `/cut config` opens the Cutthroat panel in Interface → AddOns (GLM and Codex disagreed on whether `OpenToCategory` lands correctly with a frame vs name arg in 2.5.x — **verify it opens to the right page**; if it lands on a generic page, switch `Options:Open` to pass `self.panel.name`).
+- [ ] Every checkbox reflects the current setting and toggling it changes behavior live.
+- [ ] Scale slider shows "Scale: X.XX", resizes the HUD live as you drag, and persists after `/reload`.
+
 ## 6. Settings & persistence
 - [ ] `/cut lock` toggles the drag background; drag HUD; `/reload` → position persists.
 - [ ] `/cut reset` returns to default position; `/cut scale 1.5` / `0.5` apply immediately.
