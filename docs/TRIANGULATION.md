@@ -6,6 +6,27 @@ Legend: ✅ accepted (verified real) · ❌ rejected (false/hallucinated) · ⏳
 
 ---
 
+## Iteration 11 — 2026-06-27 — Deep regression coverage (93 → 115 checks)
+
+Added behavioral + negative regression tests that lock the logic past iterations fixed, then triangulated for *coverage gaps*. GLM and Codex independently named the **same top 3** (aura filter, real-duration scaling, tick calibration) — Codex more precise (and it knew `maxSeen` was already removed; GLM's #3 assert referenced the dead variable). Raw: `reviews/glm/iter11.md`, `reviews/codex/iter11.md`.
+
+| Behavior locked (was untested) | source | how |
+|---|---|---|
+| **Aura filter** HELPFUL vs HARMFUL PLAYER (the iter-1 #1 bug) | both #1 | mock made filter-aware + **rejects pipe filters** so the old `HARMFUL\|PLAYER` regresses to a test failure; asserts our SnD/Rupture found, target-cast Rupture ignored |
+| **Real-duration bar scaling + marker math** | both #2 | record SetMinMaxValues/SetPoint; bar max = real dur (16→8 on refresh, no stale scaling); marker at `warnAt/dur*BAR_W` (25→50) |
+| **Self-calibrating tick interval** | both #3 | two consecutive ticks → interval adapts (1.0s then 2.0s); +5 proc ignored |
+| **Cooldown one-shot OnUpdate self-cleanup** | both (bonus) | OnUpdate installed+dirty after SPELLS_CHANGED; nil+clean after flush |
+| **/reload double-init idempotency** | (my brainstorm) | re-Init() errors none, creates no new frames, keeps same root |
+| Kick non-interruptible & unusable gating; smart-refresh CP gating; poison-clear; opener visibility; spark-at-cap | (my brainstorm) | negative asserts with flags reset to defaults |
+
+**Rejected:** GLM's `maxSeen` clamp test — stale (variable removed in iter 1/2); used the live "bar max == real duration" assertion instead.
+
+**Self-caught (red-team of my own tests):** 3 test bugs surfaced and were fixed (asserted `_desat` on the frame not its texture; expected a hidden icon to be `nil`; missing an *establishing* tick before measuring the calibration gap) — none were addon bugs. The harness being strict enough to fail my own wrong assertions is the value.
+
+**Lesson:** with the addon mature, the loop's leverage shifts from finding bugs to *preventing regressions* — converting every hard-won fix into an executable guard. Test-gap mining is a great triangulation use: two models converging on the same untested behaviors is high signal about where the real risk sits.
+
+---
+
 ## Iteration 10 — 2026-06-27 — Headless test harness + CI (execution ground truth)
 
 The loop's real weakness: 9 rounds of parse-check + LLM opinion, but the addon had **never executed**. Built `test/run.lua` — stubs the WoW API, loads all modules, runs lifecycle/gameplay/slash/edge paths, asserts behavior. First run: 42/10. The 10 failures traced to **one missing mock global** (`GetInventoryItemLink`, a real 2.5.x API the addon correctly uses) — i.e., the harness *worked*, surfacing a real dependency. After the stub: 52/0, then both models adversarially reviewed the harness itself. Raw: `reviews/glm/iter10.md`, `reviews/codex/iter10.md`.

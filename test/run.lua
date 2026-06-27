@@ -40,6 +40,7 @@ local function freshState()
         class = "ROGUE", energy = 100, maxEnergy = 100, combo = 0,
         hasTarget = true, targetDead = false, stealthed = false, combat = false,
         casting = nil, notInt = false, mh = true, oh = true, ohEquipped = true,
+        usable = true, noMana = false,
         auras = { player = {}, target = {} },
         cooldowns = {}, -- spellName -> duration (absent = ready)
         known = { Vanish = true, Evasion = true, Sprint = true, ["Slice and Dice"] = true },
@@ -96,6 +97,10 @@ function Wm.SetCooldown(s) s._cdActive = true end
 function Wm.Clear(s) s._cdActive = false end
 function Wm.GetChecked(s) return s._checked end
 function Wm.SetChecked(s, b) s._checked = b end
+function Wm.SetStatusBarColor(s, r, g, b) s._color = { r, g, b } end -- recorded for asserts
+function Wm.SetMinMaxValues(s, lo, hi) s._min = lo; s._max = hi end
+function Wm.SetValue(s, v) s._val = v end
+function Wm.SetPoint(s, p, rel, relP, x, y) s._point = { p, rel, relP, x, y } end
 -- remaining real methods: behaviorless no-ops (still allowlisted so typos error)
 for _, n in ipairs({ "SetAllPoints", "SetAlpha", "SetBlendMode", "SetColorTexture",
     "SetDrawEdge", "SetDuration", "SetFromAlpha", "SetLooping", "SetMinMaxValues",
@@ -141,7 +146,7 @@ function GetComboPoints(unit, target)
 end
 function IsStealthed() return state.stealthed end
 function InCombatLockdown() return state.combat end
-function IsUsableSpell() return true, false end
+function IsUsableSpell() return state.usable, state.noMana end
 function PlaySound() end
 function UnitCastingInfo()
     if state.casting then return state.casting, nil, nil, nil, nil, nil, nil, state.notInt end
@@ -165,8 +170,23 @@ function GetSpellName(i)
     table.sort(list)
     return list[i] -- nil past the end -> the addon's while-loop terminates
 end
-function UnitAura(unit, i)
-    local a = state.auras[unit] and state.auras[unit][i]
+-- Filter-aware UnitAura: returns the i-th aura MATCHING the filter (like real WoW),
+-- and treats a pipe-separated filter as INVALID (returns nil) — so a regression to
+-- the old "HARMFUL|PLAYER" bug makes aura tests fail instead of silently passing.
+function UnitAura(unit, i, filter)
+    filter = filter or ""
+    if filter:find("|") then return nil end -- invalid filter token separator
+    local wantHarm = filter:find("HARMFUL") ~= nil
+    local wantHelp = filter:find("HELPFUL") ~= nil
+    local wantPlayer = filter:find("PLAYER") ~= nil
+    local list = {}
+    for _, a in ipairs(state.auras[unit] or {}) do
+        local typeOK = (not wantHarm and not wantHelp)
+            or (wantHarm and a.harmful) or (wantHelp and not a.harmful)
+        local playerOK = (not wantPlayer) or a.byPlayer
+        if typeOK and playerOK then list[#list + 1] = a end
+    end
+    local a = list[i]
     if not a then return nil end
     return a.name, nil, nil, nil, a.dur, a.exp
 end
@@ -225,8 +245,8 @@ check("options inited", NS.modules.options and NS.modules.options.panel ~= nil)
 print("== gameplay ==")
 state.combo = 5; state.energy = 60
 try("power event", fire, "UNIT_POWER_FREQUENT", "player")
-state.auras.player[1] = { name = "Slice and Dice", dur = 21, exp = GetTime() + 10 }
-state.auras.target[1] = { name = "Rupture", dur = 16, exp = GetTime() + 4 }
+state.auras.player[1] = { name = "Slice and Dice", dur = 21, exp = GetTime() + 10, harmful = false, byPlayer = true }
+state.auras.target[1] = { name = "Rupture", dur = 16, exp = GetTime() + 4, harmful = true, byPlayer = true }
 try("aura event", fire, "UNIT_AURA", "player")
 local renderOK = true
 for _ = 1, 20 do if not pcall(tick, 0.06) then renderOK = false end end
@@ -274,6 +294,55 @@ if slash then
     check("'/cut kick' toggled kickAlert off", NS.db.kickAlert == false)
 end
 
+print("== regression: Kick negatives ==")
+-- the slash-command test above toggled several settings OFF; reset the ones these
+-- regression tests depend on so they exercise the real logic, not a disabled flag
+NS.db.kickAlert = true; NS.db.poisonCheck = true; NS.db.openerHint = true
+-- non-interruptible cast must NOT flash Kick
+NS.modules.alerts.kick:Hide()
+state.casting = "Polymorph"; state.notInt = true
+try("non-interruptible cast event", fire, "UNIT_SPELLCAST_START", "target")
+check("Kick does NOT flash on non-interruptible cast", not NS.modules.alerts.kick._shown)
+-- interruptible cast but Kick unusable (no energy) must NOT flash
+state.casting = "Fireball"; state.notInt = false; state.usable = false
+try("cast event w/ Kick unusable", fire, "UNIT_SPELLCAST_START", "target")
+check("Kick does NOT flash when unusable", not NS.modules.alerts.kick._shown)
+state.usable = true; state.casting = nil
+pcall(fire, "UNIT_SPELLCAST_STOP", "target")
+
+print("== regression: smart-refresh green gating ==")
+-- in the warn window WITH resources -> green; without CP -> not green
+local good = NS.color.good
+state.hasTarget = true; state.targetDead = false; state.energy = 60; state.combo = 5
+state.auras.target[1] = { name = "Rupture", dur = 16, exp = GetTime() + 1, harmful = true, byPlayer = true } -- rem ~1 <= ruptureWarn(2)
+NS.db.refreshZone = true; NS.db.smartRefresh = true
+pcall(fire, "UNIT_AURA", "target"); pcall(tick, 0.06)
+local rup = NS.modules.timers.bars.rup
+check("Rupture bar green in warn window w/ CP+energy",
+    rup._color and math.abs(rup._color[2] - good[2]) < 0.01)
+state.combo = 0 -- can't refresh -> must drop the green cue
+pcall(tick, 0.06)
+check("Rupture bar NOT green when 0 CP (can't refresh)",
+    rup._color and math.abs(rup._color[2] - good[2]) > 0.01)
+state.combo = 5
+
+print("== regression: misc behavior ==")
+-- poison: both weapons enchanted -> no warning
+state.combat = false; state.mh = true; state.oh = true
+pcall(fire, "PLAYER_REGEN_ENABLED")
+check("no poison warning when both weapons enchanted", not NS.modules.alerts.poison._shown)
+-- opener hint: stealth + hostile target shows; leaving stealth hides
+state.stealthed = true
+pcall(fire, "UPDATE_STEALTH")
+check("opener hint shown when stealthed w/ target", NS.modules.alerts.opener._shown)
+state.stealthed = false
+pcall(fire, "UPDATE_STEALTH")
+check("opener hint hidden when not stealthed", not NS.modules.alerts.opener._shown)
+-- energy spark hides at full energy
+state.energy = 100
+pcall(fire, "UNIT_POWER_FREQUENT", "player"); pcall(tick, 0.06)
+check("energy tick spark hidden at full energy", not NS.modules.hud.energy.spark._shown)
+
 print("== detarget clears glow ==")
 state.hasTarget = false; state.combo = 0
 pcall(tick, 0.06)
@@ -304,6 +373,68 @@ try("non-rogue lifecycle", function() fire("ADDON_LOADED", "Cutthroat"); fire("P
 check("non-rogue HUD NOT inited", not (NS3.modules.hud and NS3.modules.hud.root))
 check("non-rogue options STILL inited", NS3.modules.options and NS3.modules.options.panel ~= nil)
 check("non-rogue slash works", type(SlashCmdList["CUTTHROAT"]) == "function")
+
+-- ===================== Scenario 4: deep behavior (locks past bugs) =====================
+print("== Scenario: deep behavior ==")
+resetWorld()
+freshState()
+local NS4 = {}
+loadAll(NS4)
+fire("ADDON_LOADED", "Cutthroat"); fire("PLAYER_LOGIN")
+local tmr = NS4.modules.timers
+
+print("== aura filter correctness (the iter-1 bug class) ==")
+-- our own SnD (HELPFUL) + our own Rupture (HARMFUL PLAYER) must be found
+state.auras.player = { { name = "Slice and Dice", dur = 21, exp = GetTime() + 10, harmful = false, byPlayer = true } }
+state.auras.target = { { name = "Rupture", dur = 16, exp = GetTime() + 8, harmful = true, byPlayer = true } }
+fire("UNIT_AURA", "player"); fire("UNIT_AURA", "target")
+check("SnD found via HELPFUL filter", tmr.cache.snd ~= nil)
+check("our Rupture found via HARMFUL PLAYER filter", tmr.cache.rup ~= nil)
+-- a Rupture cast by the TARGET (not the player) must be ignored by HARMFUL PLAYER
+state.auras.target = { { name = "Rupture", dur = 16, exp = GetTime() + 8, harmful = true, byPlayer = false } }
+fire("UNIT_AURA", "target")
+check("target-cast Rupture ignored (not byPlayer)", tmr.cache.rup == nil)
+
+print("== real-duration bar scaling + marker math ==")
+NS4.db.ruptureWarn = 2; NS4.db.refreshZone = true
+state.auras.target = { { name = "Rupture", dur = 16, exp = GetTime() + 4, harmful = true, byPlayer = true } }
+fire("UNIT_AURA", "target"); tick(0.06)
+local rupbar = tmr.bars.rup
+check("bar max == real aura duration (16)", rupbar._max == 16)
+check("marker at warnAt/dur*BAR_W (2/16*200=25)", rupbar.marker._point and math.abs(rupbar.marker._point[4] - 25) < 0.01)
+-- refresh with a SHORTER duration: bar must rescale (no stale maxSeen), marker moves
+state.auras.target = { { name = "Rupture", dur = 8, exp = GetTime() + 3, harmful = true, byPlayer = true } }
+fire("UNIT_AURA", "target"); tick(0.06)
+check("bar rescales to shorter duration (8)", rupbar._max == 8)
+check("marker moves on dur change (2/8*200=50)", rupbar.marker._point and math.abs(rupbar.marker._point[4] - 50) < 0.01)
+
+print("== self-calibrating energy tick interval ==")
+local hud = NS4.modules.hud
+state.energy = 20; hud:UpdatePower()               -- seed lastEnergy
+T = T + 1.0; state.energy = 40; hud:UpdatePower()  -- 1st tick: establishes lastTick (idle gap rejected)
+T = T + 1.0; state.energy = 60; hud:UpdatePower()  -- 2nd tick: 1.0s gap measured -> interval 1.0
+check("tickInterval calibrated to observed ~1.0s gap", math.abs(hud.tickInterval - 1.0) < 0.05)
+state.energy = 65; hud:UpdatePower()               -- +5 proc, same instant -> must be ignored
+check("small proc gain does not change tickInterval", math.abs(hud.tickInterval - 1.0) < 0.05)
+T = T + 2.0; state.energy = 85; hud:UpdatePower()  -- +20 at 2.0s gap -> recalibrate up
+check("tickInterval recalibrates to ~2.0s gap", math.abs(hud.tickInterval - 2.0) < 0.05)
+
+print("== cooldown one-shot OnUpdate self-cleanup ==")
+local cds = NS4.modules.cooldowns
+fire("SPELLS_CHANGED")
+check("layout OnUpdate installed + dirty after SPELLS_CHANGED",
+    cds.ev:GetScript("OnUpdate") ~= nil and cds.layoutDirty == true)
+tick(0.06)
+check("layout OnUpdate self-cleared + clean after flush",
+    cds.ev:GetScript("OnUpdate") == nil and cds.layoutDirty == false)
+
+print("== /reload double-init idempotency ==")
+local before = #allFrames
+local root1 = hud.root
+local ok_reinit = pcall(function() hud:Init(); tmr:Init(); cds:Init(); NS4.modules.alerts:Init() end)
+check("re-Init() does not error", ok_reinit)
+check("re-Init() creates no new frames (guarded)", #allFrames == before)
+check("re-Init() keeps same hud.root", hud.root == root1)
 
 -- ===================== summary =====================
 print(string.format("\n== RESULT: %d passed, %d failed ==", ok_count, fail_count))
