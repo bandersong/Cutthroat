@@ -6,6 +6,24 @@ Legend: ✅ accepted (verified real) · ❌ rejected (false/hallucinated) · ⏳
 
 ---
 
+## Iteration 2 — 2026-06-27 — CD tracker row (cooldowns.lua)
+
+Shipped roadmap item 1: a read-only cooldown-icon row (Vanish/Evasion/Sprint/Blade Flurry/Adrenaline Rush/Cold Blood/Preparation), icons only for spells you know. GLM gave 5 findings, Codex 5. **Codex web-verified its API claims** against warcraft.wiki. Raw: `reviews/glm/iter2.md`, `reviews/codex/iter2.md`. → v1.2.0.
+
+| # | Finding | GLM | Codex | Verdict | Notes |
+|---|---------|:---:|:----:|---------|-------|
+| 1 | `RegisterEvent("PLAYER_TALENT_UPDATE")` hard-errors — event doesn't exist in 2.5.x → breaks module load | ✅ | ✅ | ✅ **applied** | Triple-confirmed (both + my own pre-review red-team). Removed; `CHARACTER_POINTS_CHANGED` + `SPELLS_CHANGED` cover respec/learn. |
+| 2 | `IsKnown` via `GetSpellCooldown(name) ~= nil` is unreliable → talent icons show for wrong specs | ✅ | ✅ | ✅ **applied** | Both prescribe the same fix: scan spellbook by name (`GetSpellName(i, BOOKTYPE_SPELL)`), cache it, rebuild on change. My original comment's premise was just wrong. |
+| 3 | Horizontal centering off by GAP/2 | ✅ | ❌ "correct" | ❌ **rejected** | **Disagreement.** I verified the algebra: last icon center lands exactly at `+totalW/2 − ICON/2`, symmetric. GLM's "fix" is identical to the existing code. 2-of-3 + proof → reject. |
+| 4 | Vertical anchor overlaps the bottom timer bar by ~4px | — | ✅ | ✅ **applied** | Codex-only, with the pixel math. Dropped `rowY` to `timerBottom − 8 − ICON/2` (−144). GLM said horizontal was wrong but missed the real vertical bug — union covers both axes. |
+| 5 | `dur > 1.5` GCD filter is borderline | — | ✅ | ✅ **applied** | Bumped to `dur > 2` (all tracked CDs ≫ 2s; adds latency margin). |
+| 6 | Dead `SpellName` helper (half-refactored) | — | ✅ | ✅ **applied** | Deleted. |
+| 7 | `SPELLS_CHANGED` fires aggressively → relayout micro-stutter | ✅ | ❌ "perf fine" | ✅ **applied (light)** | **Disagreement.** GLM flags it, Codex says fine. Cheap insurance: coalesce layout-affecting events into one rebuild/frame via a dirty-flag. Adopted GLM's idea, lighter impl. |
+| 8 | `cd:Hide()` on clear to kill 1-frame flash | ✅ | — | ❌ **rejected** | Would suppress the *next* cooldown's sweep (hidden frame won't re-show without a Show()); `Clear()` already handles it. |
+| N1 | Ban-safety + init order + spell IDs + CooldownFrameTemplate usage | — | ✅ confirmed | ✅ no-op | Codex independently verified: read-only, hud-before-cooldowns init, all 7 spell IDs correct. |
+
+**Lesson reinforced:** the two *direct contradictions* this round (#3 horizontal, #7 perf) are where triangulation earns its keep — resolved one by independent proof, one by "cheap insurance wins." And the highest-impact bug (#1) was caught by all three independent passes, which is the convergence signal you actually want.
+
 ## Iteration 1 — 2026-06-27
 
 GLM gave 6 findings, Codex gave 11. **Neither was a superset of the other** — the headline result of this loop. Raw reviews: `reviews/glm/iter1.md`, `reviews/codex/iter1.md`.

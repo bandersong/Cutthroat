@@ -59,6 +59,7 @@ f:SetScript("OnEvent", function(self, event, arg1)
         if playerClass == "ROGUE" then
             initModule("hud")
             initModule("timers")
+            initModule("cooldowns")
             initModule("alerts")
             CallAll("Refresh")
         else

@@ -14,6 +14,24 @@ Success criteria for the addon: loads clean on a TBC Anniversary client, zero Lu
 
 ---
 
+## Iteration 2 — 2026-06-27 — CD tracker row (v1.2.0)
+
+**What:** Shipped roadmap item 1 — `cooldowns.lua`, a read-only row of cooldown icons (with sweep timers + desaturation) for rogue defensives/utility: Vanish, Evasion, Sprint, Blade Flurry, Adrenaline Rush, Cold Blood, Preparation. Icons appear **only for spells you actually know**, so spec-specific talents (Cold Blood, AR/Blade Flurry, Preparation) auto-hide for the wrong build. Still read-only — no casting.
+
+**Triangulation:** GLM (5) + Codex (5), Codex web-verified its API claims. Full table in `docs/TRIANGULATION.md`. Net: **6 fixes applied, 2 rejected.**
+
+**Fixes applied:**
+1. **Removed `PLAYER_TALENT_UPDATE` registration.** That event doesn't exist in TBC 2.5.x and `RegisterEvent` on an unknown event hard-errors — it would have broken the whole module on load. Caught by GLM, Codex, *and* my own pre-review pass. `CHARACTER_POINTS_CHANGED` + `SPELLS_CHANGED` cover respec/learning.
+2. **Rewrote the known-spell test.** Was `GetSpellCooldown(name) ~= nil`, which doesn't reliably return nil for unlearned spells in 2.5.x → every talent icon would show regardless of spec. Now scans the spellbook by name (`GetSpellName(i, BOOKTYPE_SPELL)`), caches the set, and rebuilds it on spell/talent change.
+3. **Fixed vertical overlap.** Icon row was clipping the bottom timer bar by ~4px; dropped the anchor to `timerBottom − 8 − ICON/2`. (Codex's pixel math.)
+4. **GCD filter `>1.5` → `>2`** so the ~1s global cooldown never briefly sweeps the icons.
+5. **Throttled `SPELLS_CHANGED`** (fires aggressively in TBC) by coalescing layout rebuilds to one-per-frame via a dirty flag.
+6. **Deleted a dead `SpellName` helper** left from a half-refactor.
+
+**Rejected (with reasons):** GLM's "horizontal centering off by GAP/2" — verified false by algebra *and* Codex; the proposed fix was identical to the existing code. GLM's `cd:Hide()` on clear — would suppress the next cooldown's sweep.
+
+---
+
 ## Iteration 1 — 2026-06-27 — Repo + first triangulated review
 
 **What:** Created the GitHub repo, doc system, and ran the first GLM+Codex review pass on the v1.0.0 scaffold.
