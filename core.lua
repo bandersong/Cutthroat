@@ -18,6 +18,7 @@ local defaults = {
     sound = true,
     energyTicks = true, -- show 20-energy tick marks
     tickSpark = true,   -- moving spark = progress to next ~2s energy regen tick
+    refreshZone = true, -- mark the "refresh now" window near expiry on SnD/DoT bars
 }
 
 -- ---- Class gate ----

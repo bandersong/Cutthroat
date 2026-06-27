@@ -16,6 +16,7 @@ local function Help()
     print("  |cffffff00/cut sound|r        toggle alert sounds")
     print("  |cffffff00/cut ticks|r        toggle energy 20-mark lines")
     print("  |cffffff00/cut spark|r        toggle energy regen-tick spark")
+    print("  |cffffff00/cut zone|r         toggle refresh-now marker on bars")
     print("  |cffffff00/cut snd N|r        SnD warning seconds")
     print("  |cffffff00/cut rup N|r        Rupture warning seconds")
     print("  |cffffff00/cut reset|r        reset position")
@@ -51,6 +52,8 @@ function Config:Init()
             db.energyTicks = not db.energyTicks; Print("energy ticks " .. on(db.energyTicks) .. " (/reload to apply)")
         elseif cmd == "spark" then
             db.tickSpark = not db.tickSpark; Print("regen-tick spark " .. on(db.tickSpark))
+        elseif cmd == "zone" then
+            db.refreshZone = not db.refreshZone; Print("refresh marker " .. on(db.refreshZone))
         elseif cmd == "snd" then
             local n = tonumber(arg); if n then db.sndWarn = n; Print("SnD warn at " .. n .. "s") end
         elseif cmd == "rup" then
@@ -59,8 +62,8 @@ function Config:Init()
             db.point = { "CENTER", nil, "CENTER", 0, -180 }
             Print("position reset (/reload to apply)")
         elseif cmd == "status" then
-            Print(string.format("locked %s | scale %.2f | kick %s | poison %s | opener %s | sound %s | ticks %s | spark %s",
-                tostring(db.locked), db.scale, on(db.kickAlert), on(db.poisonCheck), on(db.openerHint), on(db.sound), on(db.energyTicks), on(db.tickSpark)))
+            Print(string.format("locked %s | scale %.2f | kick %s | poison %s | opener %s | sound %s | ticks %s | spark %s | zone %s",
+                tostring(db.locked), db.scale, on(db.kickAlert), on(db.poisonCheck), on(db.openerHint), on(db.sound), on(db.energyTicks), on(db.tickSpark), on(db.refreshZone)))
         else
             Help()
         end

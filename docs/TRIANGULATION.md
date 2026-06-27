@@ -6,6 +6,23 @@ Legend: ✅ accepted (verified real) · ❌ rejected (false/hallucinated) · ⏳
 
 ---
 
+## Iteration 4 — 2026-06-27 — Refresh-now marker on timer bars (v1.4.0)
+
+Added a "refresh-now" marker + final-window green on the SnD/DoT bars. **Pre-build red-team caught my own roadmap error**: it said "pandemic ~30%", but TBC 2.5.x has no pandemic — early refresh clips. Reframed as refresh-before-expiry. GLM 6 findings, Codex 6. Raw: `reviews/glm/iter4.md`, `reviews/codex/iter4.md`.
+
+| # | Finding | GLM | Codex | Verdict | Notes |
+|---|---------|:---:|:----:|---------|-------|
+| 1 | **Marker position math** | "inverted, anchor RIGHT w/ −mx" | "correct as-is" | ❌ **GLM rejected** | **GLM contradicted *itself* mid-finding** (argued inverted, then the code comment admitted "the math is ALREADY correct"). Codex + my own derivation confirm: fill right-edge = `(rem/dur)*BAR_W`, so marker at `(warnAt/dur)*BAR_W` from LEFT is exactly right. GLM's RIGHT/−mx would put it near the *full* end — wrong. |
+| 2 | Color set every render (~20×/s/bar) → churn | ✅ | ✅ | ✅ **applied** | Both. Converted to a transition state-machine (`inZone` for label+sound, `greenState` for fill); colors only change on transition. |
+| 3 | `refreshZone` off while green → base color never restored | (implied) | ✅ | ✅ **applied** | Codex explicit; the `greenState` machine restores base on the toggle transition. |
+| 4 | Marker reposition every frame | ✅ (#3a) | — | ✅ **applied** | Reposition only when `dur` changes (per cast), tracked via `b.markerDur`. |
+| 5 | Stale marker on hidden bar | ✅ "won't hide" | ❌ "child texture, hides w/ parent" | ⚖️ **Codex right** | Marker is a child texture → hides with parent; GLM's worry unfounded. Added `marker:Hide()` + state reset in the expiry branch anyway as cheap hygiene. |
+| 6 | UX: green="refresh now" only honest if `warnAt` is tight (TBC clips) | ✅ (gate on CP/energy) | ✅ ("final window" semantics) | 🔁 **roadmapped** | Both flag it. Kept the marker as the always-correct informational cue; green = final window. Resource-aware gating (only green if you *can* refresh) → new roadmap item. |
+
+**Lesson:** two contradictions again — and this time **one model argued against itself** (#1). The discipline of deriving the math independently (not trusting either model's confidence) is what caught it. Also: the most valuable catch wasn't from either review — it was the *pre-build* red-team of my own roadmap's false "pandemic" premise.
+
+---
+
 ## Iteration 3 — 2026-06-27 — Energy regen-tick predictor (hud.lua spark)
 
 Shipped roadmap item 2: a thin spark on the energy bar sweeping 0→100% over the energy regen cycle, to help energy-pooling. GLM 9 points (4 bugs + 5 confirmations), Codex 8 (3 bugs + 5 confirm/optional). → v1.3.0. Raw: `reviews/glm/iter3.md`, `reviews/codex/iter3.md`.

@@ -64,14 +64,22 @@ function Timers:Init()
         b:SetStatusBarTexture("Interface\\TargetingFrame\\UI-StatusBar")
         local c = NS.color[TRACK[key].color]
         b:SetStatusBarColor(c[1], c[2], c[3])
+        b.baseColor = c
         b.bg = b:CreateTexture(nil, "BACKGROUND"); b.bg:SetAllPoints()
         b.bg:SetColorTexture(0, 0, 0, 0.6)
+        -- "refresh now" marker: when the fill shrinks past this line you're in the
+        -- window to refresh without significant clipping (TBC has no pandemic).
+        b.marker = b:CreateTexture(nil, "OVERLAY")
+        b.marker:SetColorTexture(1, 1, 1, 0.9)
+        b.marker:SetSize(2, BAR_H)
+        b.marker:Hide()
         b.label = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         b.label:SetPoint("LEFT", 4, 0); b.label:SetText(TRACK[key].name)
         b.time = b:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
         b.time:SetPoint("RIGHT", -4, 0)
         b:Hide()
-        b:SetScript("OnHide", function(s) s.warned = false end) -- set ONCE, not per tick
+        -- reset transient render state on hide (set ONCE, not per tick)
+        b:SetScript("OnHide", function(s) s.inZone = nil; s.greenState = nil; s.markerDur = nil end)
         self.bars[key] = b
     end
 
@@ -119,7 +127,10 @@ function Timers:Render()
         local rem = c and (c.exp - now) or 0
         if not c or rem <= 0 then
             self.cache[key] = nil
-            if b:IsShown() then b:Hide() end
+            if b:IsShown() then
+                b:Hide(); b.marker:Hide()
+                b.inZone = nil; b.greenState = nil; b.markerDur = nil
+            end
         else
             local warnAt = (key == "snd" and NS.db.sndWarn)
                 or (key == "rup" and NS.db.ruptureWarn) or 2
@@ -127,16 +138,41 @@ function Timers:Render()
             b:SetMinMaxValues(0, dur)  -- real aura duration, bar never lies on refresh
             b:SetValue(rem)
             b.time:SetText(string.format("%.1f", rem))
-            if rem <= warnAt then
-                b.label:SetTextColor(unpack(NS.color.bad))
-                if not b.warned and NS.db.sound then
-                    PlaySound(SOUNDKIT and SOUNDKIT.RAID_WARNING or 8959, "Master")
-                    b.warned = true
+
+            -- refresh-now marker: the fill's right edge crosses it at rem==warnAt.
+            -- Reposition only when the duration changes (per new cast), not per frame.
+            if NS.db.refreshZone then
+                if b.markerDur ~= dur then
+                    b.markerDur = dur
+                    local frac = warnAt / dur
+                    if frac > 1 then frac = 1 elseif frac < 0 then frac = 0 end
+                    b.marker:ClearAllPoints()
+                    b.marker:SetPoint("CENTER", b, "LEFT", frac * BAR_W, 0) -- centered on edge
                 end
-            else
-                b.label:SetTextColor(1, 1, 1)
-                b.warned = false
+                if not b.marker:IsShown() then b.marker:Show() end
+            elseif b.marker:IsShown() then
+                b.marker:Hide()
             end
+
+            -- color state machine: only call Set*Color on a transition (avoids ~20
+            -- redundant C calls/sec/bar). label flash + entry sound gated by inZone;
+            -- fill-green gated separately so /cut zone toggles live and restores base.
+            local want = rem <= warnAt
+            if want ~= b.inZone then
+                b.inZone = want
+                b.label:SetTextColor(want and NS.color.bad[1] or 1,
+                                     want and NS.color.bad[2] or 1,
+                                     want and NS.color.bad[3] or 1)
+                if want and NS.db.sound then
+                    PlaySound(SOUNDKIT and SOUNDKIT.RAID_WARNING or 8959, "Master")
+                end
+            end
+            local green = want and NS.db.refreshZone
+            if green ~= b.greenState then
+                b.greenState = green
+                b:SetStatusBarColor(unpack(green and NS.color.good or b.baseColor))
+            end
+
             if not b:IsShown() then b:Show() end
         end
     end

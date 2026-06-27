@@ -14,6 +14,24 @@ Success criteria for the addon: loads clean on a TBC Anniversary client, zero Lu
 
 ---
 
+## Iteration 4 — 2026-06-27 — Refresh-now marker on timer bars (v1.4.0)
+
+**What:** Each SnD/Rupture/Expose/Garrote bar now shows a "refresh-now" marker at the point the shrinking fill crosses the warn threshold, plus the fill turns green in the final window. `/cut zone` toggle. Read-only.
+
+**Roadmap correction (caught before building):** the roadmap had called this a "pandemic ~30% refresh window." TBC 2.5.x has **no pandemic** — refreshing a DoT/SnD early simply clips the remainder. Reframed the feature as "refresh just before expiry to keep uptime without wasting duration."
+
+**Triangulation:** GLM + Codex. Notable: GLM **argued against itself** on the marker math (claimed it was inverted, then its own code comment conceded it was correct). I'd derived it independently — fill right-edge sits at `(rem/dur)·width`, so a marker at `(warnAt/dur)·width` from the left is exactly where the fill crosses `rem==warnAt` — and Codex confirmed. GLM's "anchor RIGHT with −mx" was rejected (would misplace it near the full end).
+
+**Fixes applied:**
+1. **Color state-machine** — was calling `SetStatusBarColor` ~20×/s/bar. Now `inZone` (label flash + entry sound) and `greenState` (fill color) only fire on transitions. Both reviewers flagged the churn.
+2. **Restore base color when `/cut zone` is toggled off mid-window** — the `greenState` transition handles it (Codex catch).
+3. **Marker repositioned only when the duration changes** (per new cast), not every frame.
+4. **Marker centered on the threshold edge**; explicit `marker:Hide()` + state reset when the bar expires (hygiene).
+
+**Deferred to roadmap:** both reviewers noted green = "refresh now" is only fully honest if the threshold is tight or gated on actually having the combo points / energy to refresh. Added a "resource-aware refresh cue" roadmap item; for now the marker is the precise informational cue and green = final window.
+
+---
+
 ## Iteration 3 — 2026-06-27 — Energy regen-tick predictor (v1.3.0)
 
 **What:** Shipped roadmap item 2 — a thin "spark" on the energy bar that sweeps left→right over the energy regen cycle and resets on each tick, so you can time energy pooling / pre-tick finishers. New `/cut spark` toggle. Read-only.
