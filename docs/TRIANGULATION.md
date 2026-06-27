@@ -6,6 +6,28 @@ Legend: ✅ accepted (verified real) · ❌ rejected (false/hallucinated) · ⏳
 
 ---
 
+## Iteration 7 — 2026-06-27 — Full cross-module audit (v1.6.1)
+
+First whole-addon review (prior rounds saw one file each). Both gave a ship-ready verdict (GLM "ready for alpha/beta", Codex "conditionally ship-ready") + a smoke-test checklist. Raw: `reviews/glm/iter7.md`, `reviews/codex/iter7.md`.
+
+| # | Finding | GLM | Codex | Verdict | Notes |
+|---|---------|:---:|:----:|---------|-------|
+| 1 | cooldowns runs a permanent per-frame OnUpdate just to poll a dirty flag | ✅ | ✅ | ✅ **applied** | Both. Took Codex's design (one-shot OnUpdate that removes itself after the rebuild) over GLM's (couple it into timers) — keeps the module self-contained. |
+| 2 | timers OnUpdate installed on shared `hud.root` → a future module could clobber it | — | ✅ | ✅ **applied** | Codex-only architecture catch. Moved to a private `renderFrame` parented to root. |
+| 3 | UpdatePower/UpdateCP set C-side bar/text/alpha 20×/s even when unchanged | ✅ | ✅ | ✅ **applied** | Both. Gated all C calls on actual value change; kept the poll as a freshness safety net (rejected Codex's fuller "split render from state" as overkill). |
+| 4 | SavedVariables `point`/`scale` not validated; a corrupt save could break the HUD | ✅ | ✅ | ✅ **applied (safe version)** | Both flagged. Added index-wise validation (can't use `#point` — it has an intentional nil hole). **Rejected GLM's force-reset of `point` on a version bump** — it would wipe the user's saved position. |
+| 5 | Dead `rnd` (Rend) entry in TRACK | ✅ | ✅ | ✅ **applied** | Removed. |
+| 6 | Init-order comment said "hud first / config last" but config inits first | — | ✅ | ✅ **applied** | Codex doc-accuracy catch; comment corrected. |
+| 7 | No `/reload` double-init guard | — | ✅ (optional) | ✅ **applied** | Added `if self.root/bars/icons/ev then return end` idempotency guards. Cheap insurance. |
+| 8 | `wipe` global is "hazardous, could be hooked" | ✅ | ❌ (didn't flag) | ❌ **rejected** | Codex didn't flag it; `wipe` is a universal 2.5.x global. GLM's "could be hooked" is cargo-cult defensiveness. |
+| 9 | Both `cooldowns` + `alerts` register `SPELL_UPDATE_COOLDOWN` | ✅ "fine" | ✅ "fine" | ✅ no-op | Both: different purposes, acceptable at this scale. |
+| N1 | Taint / secure-frame review | ✅ clean | ✅ clean | ✅ no-op | Both confirm: display-only, no secure templates, no spell execution. `InCombatLockdown` used only to suppress the poison nag. |
+| N2 | No leaked globals | — | ✅ confirm | ✅ verified | Independently confirmed by my `luac -l \| grep SETGLOBAL` bytecode check across all 6 files. |
+
+**Lesson:** the holistic pass found a *different class* of issue than the per-feature rounds — architecture/shared-state hazards (the `hud.root` OnUpdate clobber, the permanent dirty-poll) that are invisible when you review one file in isolation. Worth doing a whole-system pass periodically, not just per-change. The smoke-test checklist (merged from both) is now `docs/SMOKE_TEST.md`.
+
+---
+
 ## Iteration 6 — 2026-06-27 — Combo-point overcap glow (v1.6.0)
 
 Pip row pulses gold at max CP so you finish instead of overcapping. **Cleanest round yet — Codex found zero correctness bugs; GLM found zero bugs + two polish suggestions.** Convergence on quality. Raw: `reviews/glm/iter6.md`, `reviews/codex/iter6.md`.

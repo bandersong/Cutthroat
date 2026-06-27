@@ -51,10 +51,22 @@ f:SetScript("OnEvent", function(self, event, arg1)
                 CutthroatDB[k] = (type(v) == "table") and CopyTable(v) or v
             end
         end
+        -- Sanitize the values the HUD trusts, in case the save is corrupted. NOTE:
+        -- point[2] is intentionally nil (relativeTo=UIParent), so validate fields by
+        -- index — never use #point (a nil hole makes the length operator unreliable).
+        local p = CutthroatDB.point
+        if type(p) ~= "table" or type(p[1]) ~= "string" or type(p[3]) ~= "string"
+            or type(p[4]) ~= "number" or type(p[5]) ~= "number" then
+            CutthroatDB.point = CopyTable(defaults.point)
+        end
+        if type(CutthroatDB.scale) ~= "number" or CutthroatDB.scale < 0.4 or CutthroatDB.scale > 3 then
+            CutthroatDB.scale = defaults.scale
+        end
         NS.db = CutthroatDB
     elseif event == "PLAYER_LOGIN" then
-        -- Explicit init order: hud first (timers/alerts anchor to hud.root),
-        -- config last. pairs() order is nondeterministic, so never rely on it here.
+        -- Deterministic init order (pairs() is unordered): config FIRST so /cut
+        -- works for everyone, then the rogue-only visual modules — hud BEFORE
+        -- timers/cooldowns/alerts, which all anchor to hud.root.
         local function initModule(name)
             local m = NS.modules[name]
             if m and m.Init then m:Init() end

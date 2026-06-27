@@ -14,6 +14,27 @@ Success criteria for the addon: loads clean on a TBC Anniversary client, zero Lu
 
 ---
 
+## Iteration 7 — 2026-06-27 — Full cross-module audit + hardening (v1.6.1)
+
+**What:** No new feature — a whole-addon integration audit (first review of all 7 files together) and the hardening it surfaced. Both GLM and Codex gave a ship-ready verdict.
+
+**Why it mattered:** every prior review saw one file in isolation, so it couldn't catch *cross-module* issues. This pass found a different class of problem — architecture and shared-state hazards.
+
+**Fixes applied:**
+1. **cooldowns no longer runs a permanent per-frame loop.** It polled a "dirty" flag every frame forever; now a one-shot OnUpdate installs itself only when a spell/talent event fires, runs the rebuild next frame, and removes itself.
+2. **timers render loop moved off the shared `hud.root`** onto its own private frame, so a future module putting an OnUpdate on root can't silently kill the timer/HUD updates.
+3. **HUD stops making redundant C calls** — energy bar value/text and combo pip alpha are polled ~20×/s; now they only call the C-side setters when the value actually changed (kept the poll as a freshness safety net).
+4. **SavedVariables sanitization** — validates `point` and `scale` on load and resets only if malformed, so a corrupted save can't break the HUD. (Validated by field index, not `#point`, because `point[2]` is intentionally nil.)
+5. Removed dead `rnd` (Rend) tracking entry; fixed a stale init-order comment; added `/reload` double-init guards to every module.
+
+**Rejected:** GLM's claim that the `wipe` global is hazardous (Codex didn't flag it; it's universal in 2.5.x), and GLM's force-reset of `point` on version bump (would wipe the user's saved HUD position).
+
+**Confirmed by both + an independent bytecode check:** zero taint/secure-frame risk, zero leaked globals.
+
+**Artifact:** merged in-client smoke-test checklist → `docs/SMOKE_TEST.md` (the addon is parse-clean and audited but still needs a human to verify in-game — tracked as verification debt).
+
+---
+
 ## Iteration 6 — 2026-06-27 — Combo-point overcap glow (v1.6.0)
 
 **What:** The combo-point pip row pulses gold when you're at max combo points (5), nudging you to spend them on a finisher instead of overcapping (building past 5 is wasted generation = lost DPS). `/cut finish` toggle. Read-only — it's a cue, not rotation advice.

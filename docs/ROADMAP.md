@@ -14,7 +14,7 @@
 - [ ] **Combat log DPS/energy efficiency mini-readout.**
 - [~] **Poison type awareness**: ~~name which poison is missing~~ — INFEASIBLE in 2.5.x: `GetWeaponEnchantInfo` returns has-enchant/expiry/charges but no enchant ID/name, so the applied poison can't be identified. Present/absent only.
 - [ ] **Localization scaffold** (enUS strings table → other locales).
-- [ ] **In-client smoke test checklist** (the loop can't run WoW; record manual test results).
+- [x] **In-client smoke test checklist** → `docs/SMOKE_TEST.md` (merged from the iter-7 GLM+Codex audit). *(iter 7)*
 
 ## Verification debt (loop can't run WoW — needs friend/in-client)
 - [ ] Confirm `## Interface:` matches the live Anniversary build (`/dump select(4,GetBuildInfo())`).

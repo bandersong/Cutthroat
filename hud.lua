@@ -9,6 +9,7 @@ local MAX_CP = 5
 local ENERGY = Enum and Enum.PowerType and Enum.PowerType.Energy or 3
 
 function HUD:Init()
+    if self.root then return end -- idempotent: never double-init frames
     local db = NS.db
 
     -- root anchor (movable)
@@ -112,10 +113,17 @@ function HUD:UpdatePower()
     if not self.energy then return end
     local e = UnitPower("player", ENERGY)
     local m = UnitPowerMax("player", ENERGY)
-    self.energyMax = (m and m > 0) and m or 100
-    self.energy:SetMinMaxValues(0, self.energyMax)
-    self.energy:SetValue(e)
-    self.energy.text:SetText(e)
+    m = (m and m > 0) and m or 100
+    -- This is polled ~20x/s; only make the C-side bar calls when values change.
+    if m ~= self.energyMax then
+        self.energyMax = m
+        self.energy:SetMinMaxValues(0, m)
+    end
+    if e ~= self.shownEnergy then
+        self.shownEnergy = e
+        self.energy:SetValue(e)
+        self.energy.text:SetText(e)
+    end
 
     if self.lastEnergy == nil then self.lastEnergy = e; return end
     -- A regen tick lands as a sizable positive delta. Small proc gains (Combat
@@ -157,8 +165,12 @@ end
 function HUD:UpdateCP()
     -- guard on a live target so the glow can't linger after detarget
     local cp = UnitExists("target") and (GetComboPoints("player", "target") or 0) or 0
-    for i = 1, MAX_CP do
-        self.pips[i]:SetAlpha(i <= cp and 1.0 or 0.15)
+    -- polled ~20x/s; only re-alpha the pips when the CP count actually changes
+    if cp ~= self.shownCP then
+        self.shownCP = cp
+        for i = 1, MAX_CP do
+            self.pips[i]:SetAlpha(i <= cp and 1.0 or 0.15)
+        end
     end
     -- finish-now glow at max CP (pulsed; called every render so the sine is smooth)
     local g = self.cpGlow

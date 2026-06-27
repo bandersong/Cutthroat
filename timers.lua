@@ -13,7 +13,6 @@ local TRACK = {
     rup = { name = "Rupture",        isSelf = false, color = "bad"  },
     exp = { name = "Expose Armor",   isSelf = false, color = "warn" },
     gar = { name = "Garrote",        isSelf = false, color = "bad"  },
-    rnd = { name = "Rend",           isSelf = false, color = "warn" }, -- harmless if unused
 }
 
 local BAR_W, BAR_H = 200, 14
@@ -71,6 +70,7 @@ local SOURCE = {
 }
 
 function Timers:Init()
+    if self.bars then return end -- idempotent: never double-init frames/scripts
     local root = NS.modules.hud.root
     self.bars = {}
     self.cache = {} -- key -> { exp = absolute, dur = full }
@@ -110,8 +110,11 @@ function Timers:Init()
     self.scan = scan
 
     -- OnUpdate only RENDERS the cached countdowns (4 bars, zero aura scans).
+    -- Use a PRIVATE frame, not hud.root, so a future module setting an OnUpdate on
+    -- root can't silently clobber the render loop (shared-state hazard).
     self.elapsed = 0
-    root:SetScript("OnUpdate", function(_, dt)
+    self.renderFrame = CreateFrame("Frame", nil, root)
+    self.renderFrame:SetScript("OnUpdate", function(_, dt)
         self.elapsed = self.elapsed + dt
         if self.elapsed < 0.05 then return end
         self.elapsed = 0

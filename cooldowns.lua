@@ -26,6 +26,7 @@ local BOOK = BOOKTYPE_SPELL or "spell"
 
 function CDs:Init()
     if not NS.IsRogue then return end
+    if self.icons then return end -- idempotent: never double-init
     local root = NS.modules.hud.root
     self.icons = {}
     self.known = {}
@@ -72,19 +73,20 @@ function CDs:Init()
     ev:RegisterEvent("CHARACTER_POINTS_CHANGED") -- talent point spent / respec
     -- NOTE: PLAYER_TALENT_UPDATE does NOT exist in TBC 2.5.x; RegisterEvent on an
     -- unknown event hard-errors and would break load. The two above cover respec.
+    -- SPELLS_CHANGED fires aggressively, so coalesce layout rebuilds with a ONE-SHOT
+    -- OnUpdate that removes itself after running — no permanent per-frame loop.
+    local function flushLayout()
+        ev:SetScript("OnUpdate", nil)
+        self.layoutDirty = false
+        self:RebuildKnown()
+        self:Relayout()
+    end
     ev:SetScript("OnEvent", function(_, e)
         if e == "SPELL_UPDATE_COOLDOWN" then
             self:UpdateCooldowns()
-        else
-            self.layoutDirty = true -- SPELLS_CHANGED fires aggressively; coalesce
-        end
-    end)
-    -- coalesce bursty layout-affecting events into one rebuild per frame
-    ev:SetScript("OnUpdate", function()
-        if self.layoutDirty then
-            self.layoutDirty = false
-            self:RebuildKnown()
-            self:Relayout()
+        elseif not self.layoutDirty then
+            self.layoutDirty = true
+            ev:SetScript("OnUpdate", flushLayout) -- fires once next frame, then clears
         end
     end)
     self.ev = ev

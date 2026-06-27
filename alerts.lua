@@ -19,6 +19,7 @@ local function SpellReady(name)
 end
 
 function Alerts:Init()
+    if self.ev then return end -- idempotent: never double-init frames/events
     local root = NS.modules.hud.root
 
     -- ---- Kick flash icon (center, above HUD) ----
